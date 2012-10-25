@@ -11,7 +11,7 @@ public class KilimNature implements IProjectNature {
 	/**
 	 * ID of this project nature
 	 */
-	public static final String KILIM_NATURE_ID = "kilim.builder.kilimNature";
+	public static final String KILIM_NATURE_ID = "com.googlecode.kilimbuilder.kilimNature";
 
 	private IProject project;
 

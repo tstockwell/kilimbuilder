@@ -8,7 +8,7 @@
       <builder
             hasNature="true">
          <run
-               class="kilim.tools.eclipse.builder.KilimBuilder">
+               class="com.googlecode.kilimbuilder.KilimBuilder">
          </run>
       </builder>
    </extension>
@@ -18,26 +18,26 @@
          point="org.eclipse.core.resources.natures">
       <runtime>
          <run
-               class="kilim.tools.eclipse.builder.KilimNature">
+               class="com.googlecode.kilimbuilder.KilimNature">
          </run>
       </runtime>
       <builder
-            id="kilim.builder.kilimBuilder">
+            id="com.googlecode.kilimbuilder.kilimBuilder">
       </builder>
    </extension>
    <extension
          point="org.eclipse.ui.popupMenus">
       <objectContribution
             adaptable="true"
-            id="kilim.builder.contribution1"
+            id="com.googlecode.kilimbuilder.contribution1"
             nameFilter="*"
             objectClass="org.eclipse.core.resources.IProject">
          <action
-               class="kilim.tools.eclipse.builder.ToggleNatureAction"
+               class="com.googlecode.kilimbuilder.ToggleNatureAction"
                enablesFor="+"
-               id="kilim.builder.addRemoveNatureAction"
+               id="com.googlecode.kilimbuilder.addRemoveNatureAction"
                label="Add/Remove Kilim Support"
-               menubarPath="additions">
+               menubarPath="org.eclipse.ui.projectConfigure/additions">
          </action>
       </objectContribution>
    </extension>

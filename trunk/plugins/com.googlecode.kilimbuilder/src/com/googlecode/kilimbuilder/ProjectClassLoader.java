@@ -50,14 +50,14 @@ public class ProjectClassLoader extends ClassLoader
              rootLoc.append(project.getOutputLocation());
        }
        catch (JavaModelException e) {
-          KilimLog.logError(e);
+          LogUtils.logError(e);
           return null;
        }
        for (int i = 0; i < entries.length; i++) {
           IClasspathEntry entry = entries[i];
           switch (entry.getEntryKind()) {
 
-             case IClasspathEntry.CPE_SOURCE :
+             case IClasspathEntry.CPE_SOURCE : {
                 IPath path = entry.getOutputLocation();
                 if (path != null)
                    path = rootLoc.append(path);
@@ -67,8 +67,18 @@ public class ProjectClassLoader extends ClassLoader
                 byte[] buf = readBytes(path.toFile());
                 if (buf != null)
                    return buf;
-                break;
-             case IClasspathEntry.CPE_LIBRARY:
+             } break;
+             case IClasspathEntry.CPE_LIBRARY: {
+                 IPath path = entry.getOutputLocation();
+                 if (path != null)
+                    path = rootLoc.append(path);
+                 else
+                    path = outputLocation;
+                 path = path.append(relativePathToClassFile);
+                 byte[] buf = readBytes(path.toFile());
+                 if (buf != null)
+                    return buf;
+             } break;
              case IClasspathEntry.CPE_PROJECT:
                 // Handle other entry types here.
                 break;
@@ -107,7 +117,7 @@ public class ProjectClassLoader extends ClassLoader
          return result;
       }
       catch (Exception e) {
-    	  KilimLog.logError(e);
+    	  LogUtils.logError(e);
          return null;
       }
       finally {
@@ -116,7 +126,7 @@ public class ProjectClassLoader extends ClassLoader
                stream.close();
          }
          catch (IOException e) {
-        	 KilimLog.logError(e);
+        	 LogUtils.logError(e);
             return null;
          }
       }

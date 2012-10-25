@@ -9,7 +9,7 @@ import org.eclipse.core.runtime.Status;
  * Code from the book 'Eclipse Plugins': http://www.qualityeclipse.com/
  * Modified for use in Kilim Builder
  */
-public class KilimLog {
+public class LogUtils {
    /**
     * Log the specified information.
     * 

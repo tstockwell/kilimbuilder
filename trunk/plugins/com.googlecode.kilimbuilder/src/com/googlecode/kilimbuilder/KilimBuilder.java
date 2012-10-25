@@ -23,10 +23,11 @@ import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.core.runtime.jobs.Job;
-import org.eclipse.jdt.core.ICompilationUnit;
+import org.eclipse.jdt.core.IClassFile;
 import org.eclipse.jdt.core.IJavaProject;
-import org.eclipse.jdt.core.IType;
 import org.eclipse.jdt.core.JavaCore;
+import org.eclipse.jdt.core.ToolFactory;
+import org.eclipse.jdt.core.util.IClassFileReader;
 import org.xml.sax.SAXException;
 import org.xml.sax.SAXParseException;
 import org.xml.sax.helpers.DefaultHandler;
@@ -43,17 +44,16 @@ public class KilimBuilder extends IncrementalProjectBuilder {
 		public IStatus runInWorkspace(IProgressMonitor monitor) {
 			try {
 				// get class name
-				ICompilationUnit compilationUnit= JavaCore.createCompilationUnitFrom(_classfile);
-				IType primaryType= compilationUnit.findPrimaryType();
-				String className= primaryType.getFullyQualifiedName();
-				
+				IClassFile classFile= (IClassFile)JavaCore.create(_classfile);
+				IClassFileReader classFileReader= ToolFactory.createDefaultClassFileReader(classFile, IClassFileReader.CLASSFILE_ATTRIBUTES);
+				String className= new String(classFileReader.getClassName()).replace('/', '.');
 				
 				// get path to class to weave
 				IContainer classContainer= _classfile.getParent();
-				String outputDirectory= classContainer.getFullPath().toString(); 
+				String outputDirectory= classContainer.getLocation().toString(); 
 				
-				IJavaProject project= (IJavaProject)_classfile.getProject();
-				ClassLoader projectClassLoader= new ProjectClassLoader(project);
+				IJavaProject project= classFile.getJavaProject();
+				ClassLoader projectClassLoader= PluginUtils.createProjectClassLoader(project);
 				
 				ClassLoader oldClassLoader= Thread.currentThread().getContextClassLoader();
 				Thread.currentThread().setContextClassLoader(projectClassLoader);
@@ -70,7 +70,7 @@ public class KilimBuilder extends IncrementalProjectBuilder {
 				deleteMarkers(_classfile);
 			} 
 			catch (Exception e) {
-				KilimLog.logError("Error during Kilim weaving", e);
+				LogUtils.logError("Error during Kilim weaving", e);
 			}
 			return Status.OK_STATUS;
 		}
@@ -136,9 +136,9 @@ public class KilimBuilder extends IncrementalProjectBuilder {
 		}
 	}
 
-	public static final String BUILDER_ID = "kilim.builder.kilimBuilder";
+	public static final String BUILDER_ID = "com.googlecode.kilimbuilder.kilimBuilder";
 
-	private static final String KILIM_MARKER_TYPE = "kilim.builder.kilimProblem";
+	private static final String KILIM_MARKER_TYPE = "com.googlecode.kilimbuilder.kilimProblem";
 
 	private SAXParserFactory parserFactory;
 
