@@ -16,4 +16,4 @@ Export-Package: kilim,
  kilim.tools
 Require-Bundle: org.junit;bundle-version="3.8.2"
 Bundle-ClassPath: libs/asm-all-2.2.3.jar,
- /bin
+ bin/
