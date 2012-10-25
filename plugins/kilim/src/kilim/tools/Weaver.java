@@ -48,7 +48,7 @@ public class Weaver {
      *   
      * @see #weave(List) for run-time weaving.
      */
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) throws Throwable {
         // System.out.println(System.getProperty("java.class.path"));
 
         Detector detector = Detector.DEFAULT;
@@ -85,19 +85,13 @@ public class Weaver {
                     weaveClass(name, detector);
                 }
             } catch (KilimException ke) {
-                System.err.println("Error weaving " + currentName + ". " + ke.getMessage());
-                // ke.printStackTrace();
-                System.exit(1);
+            	throw new RuntimeException("Error weaving " + currentName, ke);
             } catch (IOException ioe) {
-                System.err.println("Unable to find/process '" + currentName + "'");
-                System.exit(1);
+            	throw new RuntimeException("Unable to find/process '" + currentName, ioe);
             } catch (Throwable t) {
-                System.err.println("Error weaving " + currentName);
-                t.printStackTrace();
-                System.exit(1);
+                throw new RuntimeException("Error weaving " + currentName, t);
             }
         }
-        System.exit(err);
     }
 
     static boolean exclude(String name) {

@@ -23,7 +23,7 @@ import org.osgi.service.prefs.Preferences;
 public class KilimActivator extends AbstractUIPlugin {
 
 	// The plug-in ID
-	public static final String PLUGIN_ID = "com.qualityeclipse.favorites";
+	public static final String PLUGIN_ID = "com.googlecode.kilimbuilder";
 
 	// The shared instance
 	private static KilimActivator plugin;
