@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.4"?>
+<plugin>
+   <extension
+         id="kilimBuilder"
+         name="Kilim Project Builder"
+         point="org.eclipse.core.resources.builders">
+      <builder
+            hasNature="true">
+         <run
+               class="kilim.tools.eclipse.builder.KilimBuilder">
+         </run>
+      </builder>
+   </extension>
+   <extension
+         id="kilimNature"
+         name="Kilim Project Nature"
+         point="org.eclipse.core.resources.natures">
+      <runtime>
+         <run
+               class="kilim.tools.eclipse.builder.KilimNature">
+         </run>
+      </runtime>
+      <builder
+            id="kilim.builder.kilimBuilder">
+      </builder>
+   </extension>
+   <extension
+         point="org.eclipse.ui.popupMenus">
+      <objectContribution
+            adaptable="true"
+            id="kilim.builder.contribution1"
+            nameFilter="*"
+            objectClass="org.eclipse.core.resources.IProject">
+         <action
+               class="kilim.tools.eclipse.builder.ToggleNatureAction"
+               enablesFor="+"
+               id="kilim.builder.addRemoveNatureAction"
+               label="Add/Remove Kilim Support"
+               menubarPath="additions">
+         </action>
+      </objectContribution>
+   </extension>
+   <extension
+         id="kilimProblem"
+         name="Kilim Problem"
+         point="org.eclipse.core.resources.markers">
+      <super
+            type="org.eclipse.core.resources.problemmarker">
+      </super>
+      <persistent
+            value="true">
+      </persistent>
+   </extension>
+
+</plugin>
