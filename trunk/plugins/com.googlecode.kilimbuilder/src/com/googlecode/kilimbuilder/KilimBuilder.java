@@ -1,5 +1,8 @@
 package com.googlecode.kilimbuilder;
 
+import java.io.BufferedInputStream;
+import java.io.InputStream;
+import java.util.HashSet;
 import java.util.Map;
 
 import javax.xml.parsers.ParserConfigurationException;
@@ -7,6 +10,7 @@ import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
 
 import kilim.KilimClassLoader;
+import kilim.KilimException;
 import kilim.mirrors.Detector;
 import kilim.mirrors.RuntimeClassMirrors;
 import kilim.tools.Weaver;
@@ -27,7 +31,9 @@ import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.jdt.core.IClassFile;
+import org.eclipse.jdt.core.IJavaElement;
 import org.eclipse.jdt.core.IJavaProject;
+import org.eclipse.jdt.core.IType;
 import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.jdt.core.ToolFactory;
 import org.eclipse.jdt.core.util.IClassFileReader;
@@ -45,37 +51,66 @@ public class KilimBuilder extends IncrementalProjectBuilder {
 			this._classfile= classfile;
 		}
 		public IStatus runInWorkspace(IProgressMonitor monitor) {
+			IResource sourceFile= null;
 			try {
+				deleteMarkers(_classfile);
+				
 				// get class name
 				IClassFile classFile= (IClassFile)JavaCore.create(_classfile);
 				IClassFileReader classFileReader= ToolFactory.createDefaultClassFileReader(classFile, IClassFileReader.CLASSFILE_ATTRIBUTES);
 				String className= new String(classFileReader.getClassName()).replace('/', '.');
+				IJavaProject project= classFile.getJavaProject();
+				
+				// find source file if we can
+				String primaryName= className;
+				int i= primaryName.indexOf('$');
+				if (0 < i)
+					primaryName= primaryName.substring(0, i);
+				IType type= project.findType(primaryName);
+				if (type != null)
+					sourceFile= type.getResource();
 				
 				// get path to class to weave
 				IContainer classContainer= _classfile.getParent();
 				String outputDirectory= classContainer.getLocation().toString(); 
 				
-				IJavaProject project= classFile.getJavaProject();
 				ClassLoader projectClassLoader= PluginUtils.createProjectClassLoader(project);
-				KilimClassLoader kilimClassLoader= new KilimClassLoader(projectClassLoader);
-				
-				//ClassLoader oldClassLoader= Thread.currentThread().getContextClassLoader();
-				//Thread.currentThread().setContextClassLoader(kilimClassLoader);
-				//Detector detector= new Detector(new RuntimeClassMirrors(kilimClassLoader));
-				Detector detector= new Detector(new RuntimeClassMirrors(KilimBuilder.class.getClassLoader()));
+				Detector detector= new Detector(new RuntimeClassMirrors(projectClassLoader));
+				InputStream classContents= new BufferedInputStream(_classfile.getContents());
 				try {
-					Weaver.weaveFile(className, _classfile.getContents(), detector);
+					Weaver.weaveFile(className, classContents, detector);
 				}
 				finally {
-					//Thread.currentThread().setContextClassLoader(oldClassLoader);
+					try { classContents.close(); } catch (Throwable t) { }
 				}
 				
 				// refresh so that Eclipse sees any new files
 				_classfile.getParent().refreshLocal(IResource.DEPTH_ZERO, null);
-				
-				deleteMarkers(_classfile);
 			} 
 			catch (Throwable e) {
+				if (sourceFile != null) {
+					// try to extract kilim message
+					String msg= e.getMessage();
+					HashSet<Throwable> seen= new HashSet<Throwable>();
+					seen.add(e);
+					Throwable c= e.getCause();
+					while (c != null && !seen.contains(c)) {
+						if (c instanceof KilimException) {
+							msg= c.getMessage();
+							break;
+						}
+						seen.add(c);
+					}
+					
+					try {
+						IMarker marker = sourceFile.createMarker(IMarker.PROBLEM);
+						marker.setAttribute(IMarker.MESSAGE, msg);
+						marker.setAttribute(IMarker.SEVERITY, IMarker.SEVERITY_ERROR);
+						marker.setAttribute(IMarker.SOURCE_ID, KilimActivator.PLUGIN_ID);
+					}
+					catch (CoreException x) { // ignore 
+					}
+				}
 				LogUtils.logError("Error during Kilim weaving", e);
 			}
 			return Status.OK_STATUS;
@@ -193,7 +228,11 @@ public class KilimBuilder extends IncrementalProjectBuilder {
 
 	private void deleteMarkers(IFile file) {
 		try {
-			file.deleteMarkers(KILIM_MARKER_TYPE, false, IResource.DEPTH_ZERO);
+			for (IMarker marker:file.findMarkers(null, true, IResource.DEPTH_INFINITE)) {
+				if (marker.getAttribute(IMarker.SOURCE_ID).equals(KilimActivator.PLUGIN_ID)) {
+					marker.delete();
+				}
+			}
 		} catch (CoreException ce) {
 		}
 	}
@@ -205,12 +244,6 @@ public class KilimBuilder extends IncrementalProjectBuilder {
 		}
 	}
 
-	private SAXParser getParser() throws ParserConfigurationException, SAXException {
-		if (parserFactory == null) {
-			parserFactory = SAXParserFactory.newInstance();
-		}
-		return parserFactory.newSAXParser();
-	}
 
 	protected void incrementalBuild(IResourceDelta delta, IProgressMonitor monitor) throws CoreException {
 		// the visitor does the work.
