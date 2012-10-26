@@ -6,6 +6,9 @@ import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
 
+import kilim.KilimClassLoader;
+import kilim.mirrors.Detector;
+import kilim.mirrors.RuntimeClassMirrors;
 import kilim.tools.Weaver;
 
 import org.eclipse.core.resources.IContainer;
@@ -54,14 +57,17 @@ public class KilimBuilder extends IncrementalProjectBuilder {
 				
 				IJavaProject project= classFile.getJavaProject();
 				ClassLoader projectClassLoader= PluginUtils.createProjectClassLoader(project);
+				KilimClassLoader kilimClassLoader= new KilimClassLoader(projectClassLoader);
 				
-				ClassLoader oldClassLoader= Thread.currentThread().getContextClassLoader();
-				Thread.currentThread().setContextClassLoader(projectClassLoader);
+				//ClassLoader oldClassLoader= Thread.currentThread().getContextClassLoader();
+				//Thread.currentThread().setContextClassLoader(kilimClassLoader);
+				//Detector detector= new Detector(new RuntimeClassMirrors(kilimClassLoader));
+				Detector detector= new Detector(new RuntimeClassMirrors(KilimBuilder.class.getClassLoader()));
 				try {
-					Weaver.main(new String[]{ "-d", outputDirectory, className });
+					Weaver.weaveFile(className, _classfile.getContents(), detector);
 				}
 				finally {
-					Thread.currentThread().setContextClassLoader(oldClassLoader);
+					//Thread.currentThread().setContextClassLoader(oldClassLoader);
 				}
 				
 				// refresh so that Eclipse sees any new files
@@ -69,7 +75,7 @@ public class KilimBuilder extends IncrementalProjectBuilder {
 				
 				deleteMarkers(_classfile);
 			} 
-			catch (Exception e) {
+			catch (Throwable e) {
 				LogUtils.logError("Error during Kilim weaving", e);
 			}
 			return Status.OK_STATUS;

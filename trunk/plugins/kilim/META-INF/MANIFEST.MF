@@ -17,3 +17,4 @@ Export-Package: kilim,
 Require-Bundle: org.junit;bundle-version="3.8.2"
 Bundle-ClassPath: libs/asm-all-2.2.3.jar,
  bin/
+Eclipse-BuddyPolicy: global
