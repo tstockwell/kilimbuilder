@@ -1,6 +1,7 @@
 package com.googlecode.kilimbuilder;
 
 import java.net.MalformedURLException;
+import java.net.URI;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.ArrayList;
@@ -112,9 +113,10 @@ public class PluginUtils
 	{
 		URL url = null;
 		try {
-			url = new URL("file://" + path.toOSString());
+			url= path.toFile().toURL();
+			//url = new URL("file://" + path.toOSString());
 		} catch (MalformedURLException e) {
-			e.printStackTrace();
+			LogUtils.logError(e);
 		}
 		return url;
 	}
