@@ -14,7 +14,7 @@ import org.objectweb.asm.Type;
  * @see Mirrors 
  */
 
-class RuntimeClassMirrors extends Mirrors {
+public class RuntimeClassMirrors extends Mirrors {
     // Weakly cache the mirror objects.
     Map<String, RuntimeClassMirror> cachedClasses = Collections
             .synchronizedMap(new WeakHashMap<String, RuntimeClassMirror>());

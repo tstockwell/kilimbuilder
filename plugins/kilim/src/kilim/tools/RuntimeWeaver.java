@@ -27,7 +27,7 @@ import kilim.mirrors.Detector;
  * This class supports both command-line and run time weaving of Kilim bytecode. 
  */
 
-public class Weaver {
+public class RuntimeWeaver {
     public static String outputDir = null;
     public static boolean verbose = true;
     public static Pattern excludePattern = null;
@@ -229,11 +229,11 @@ public class Weaver {
     private Detector detector;
     private CachedClassMirrors mirrors;
 
-    public Weaver() {
+    public RuntimeWeaver() {
         this(Thread.currentThread().getContextClassLoader());
     }
     
-    public Weaver(ClassLoader cl) {
+    public RuntimeWeaver(ClassLoader cl) {
         mirrors = new CachedClassMirrors(cl);
         detector = new Detector(mirrors);
     }
