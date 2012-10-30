@@ -1,11 +1,11 @@
 package com.googlecode.kilimbuilder;
 
 import java.net.MalformedURLException;
-import java.net.URI;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 
@@ -15,7 +15,10 @@ import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.jdt.core.IClasspathEntry;
+import org.eclipse.jdt.core.IJavaElement;
 import org.eclipse.jdt.core.IJavaProject;
+import org.eclipse.jdt.core.IParent;
+import org.eclipse.jdt.core.IType;
 import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.jdt.core.JavaModelException;
 
@@ -41,7 +44,7 @@ public class PluginUtils
 			URL urls[] = getClasspathAsURLArray(proj);
 			loaders.add(new URLClassLoader(urls));
 		}
-		
+
 		for (URLClassLoader loader : loaders) {
 			try {
 				Class<?> clazz = loader.loadClass(fqClassname);
@@ -162,7 +165,7 @@ public class PluginUtils
 			return container.getLocation();
 		return null;
 	}
-	
+
 	/**
 	 * Get the project's binary output container.
 	 * 
@@ -180,7 +183,7 @@ public class PluginUtils
 			return p;
 		return p.getFolder(path.removeFirstSegments(1));
 	}
-	
+
 	/**
 	 * Return the location of the binary output files for the JavaProject.
 	 * 
@@ -201,5 +204,68 @@ public class PluginUtils
 		} catch (JavaModelException e) {
 			return null;
 		}
+	}	
+
+	/**
+	 * Return an IType (Source type, not Binary) for the given class name.
+	 * 
+	 * @return null if no such class can be found.
+	 * @throws JavaModelException
+	 */
+	public static IType findType(IJavaProject javaProject, final String className) throws JavaModelException {
+		String primaryName= className;
+		int occurence= 0;
+		IType primaryType= null;
+		int i= primaryName.lastIndexOf('$');
+		if (0 < i) {
+			try {
+				occurence= Integer.parseInt(primaryName.substring(i+1));
+				primaryName= primaryName.substring(0, primaryName.indexOf('$'));
+			}
+			catch (NumberFormatException x) {
+			}
+		}
+
+		
+		/*
+		 * IJavaProject.findType works for top level classes and named inner
+		 * classes, but not for anonymous inner classes.  
+		 */
+		primaryType= javaProject.findType(primaryName);
+		
+		if (!primaryType.exists())
+			return null; // we failed to find the containing type
+		
+		if (occurence <= 0) // if not anonymous then we done
+			return primaryType;
+
+		/*
+		 * If we're looking for an anonymous inner class then we need to look 
+		 * through the primary type for it. 
+		 */
+		LinkedList<IJavaElement> todo= new LinkedList<IJavaElement>();
+		todo.add(primaryType);
+		IType innerType= null;
+		while (!todo.isEmpty()) {
+			IJavaElement element= todo.removeFirst();
+
+			if (element instanceof IType) {
+				IType type= (IType)element;
+				String name= type.getFullyQualifiedName();
+				if (name.equals(className)) {
+					innerType= type;
+					break;
+				}
+			}
+
+			if (element instanceof IParent) {
+				for (IJavaElement child:((IParent)element).getChildren()) {
+					todo.add(child);
+
+				}
+			}
+		}
+
+		return innerType;
 	}	
 }
