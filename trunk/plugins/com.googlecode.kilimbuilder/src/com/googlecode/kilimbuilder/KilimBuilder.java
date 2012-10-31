@@ -192,7 +192,7 @@ public class KilimBuilder extends IncrementalProjectBuilder {
 						String methodSig= msg.substring(msg.indexOf(methodMarker)+methodMarker.length());
 						methodSig.trim();
 						String methodName= methodSig.substring(0, methodSig.indexOf('(')); 
-						msg= methodName+ " method throws Pausable in the base class but not in subclass";
+						msg= "Method throws Pausable in the base class but not in subclass";
 						
 						IType type= PluginUtils.findType(project, className);
 						if (type != null) {
@@ -205,7 +205,7 @@ public class KilimBuilder extends IncrementalProjectBuilder {
 						String methodSig= msg.substring(msg.indexOf("should be marked pausable. It calls pausable methods"));
 						methodSig.trim();
 						String methodName= methodSig.substring(0, methodSig.indexOf('(')); 
-						msg= methodName+ " method should be marked pausable. It calls pausable methods";
+						msg= "Method should be marked pausable. It calls pausable methods";
 						
 						IType type= PluginUtils.findType(project, className);
 						if (type != null) {
@@ -215,10 +215,13 @@ public class KilimBuilder extends IncrementalProjectBuilder {
 						}
 					}
 					else if (msg.contains("from within a synchronized block")) {
-						String methodSig= msg.substring(msg.indexOf("should be marked pausable. It calls pausable methods"));
+						String methodMarker= "Caller: ";
+						String methodSig= msg.substring(msg.indexOf(methodMarker)+methodMarker.length());
+						methodSig= methodSig.substring(0, methodSig.indexOf(';'));
 						methodSig.trim();
 						String methodName= methodSig.substring(0, methodSig.indexOf('(')); 
-						msg= methodName+ "Cannot call pausable methods from within a synchronized block";
+						methodName= methodName.substring(methodName.lastIndexOf('.')); 
+						msg= "Method calls Pausable method from within a synchronized block";
 						
 						IType type= PluginUtils.findType(project, className);
 						if (type != null) {
