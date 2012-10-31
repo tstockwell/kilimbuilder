@@ -220,7 +220,7 @@ public class KilimBuilder extends IncrementalProjectBuilder {
 						methodSig= methodSig.substring(0, methodSig.indexOf(';'));
 						methodSig.trim();
 						String methodName= methodSig.substring(0, methodSig.indexOf('(')); 
-						methodName= methodName.substring(methodName.lastIndexOf('.')); 
+						methodName= methodName.substring(methodName.lastIndexOf('.')+1); 
 						msg= "Method calls Pausable method from within a synchronized block";
 						
 						IType type= PluginUtils.findType(project, className);
