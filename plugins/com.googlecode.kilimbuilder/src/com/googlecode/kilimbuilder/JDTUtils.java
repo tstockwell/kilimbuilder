@@ -650,41 +650,4 @@ public class JDTUtils {
 	  return getLineNumFromOffset(cUnit, offSet);
   }
 
-  public static IType findSourceType(IJavaProject project, String className) {
-		IType sourceType= null;
-		try {
-			sourceType= project.findType(className);
-			if (sourceType != null) {
-				if (sourceType.isBinary()) {
-					String primaryName= className;
-					int i= className.lastIndexOf('$');
-					if (0 < i) {
-						primaryName= primaryName.substring(0, i);
-						IType primaryType= findSourceType(project, primaryName);
-						IType[] types= primaryType.getTypes();
-						int occurrenceCount= primaryType.getOccurrenceCount();
-						IType[] occurences= new IType[occurrenceCount];
-						for (int o= 0; o < occurrenceCount; o++) {
-							occurences[0]= primaryType.getType("", o);
-						}
-						try {
-							int occurance= Integer.parseInt(className.substring(i+1));
-							sourceType= primaryType.getType("", occurance);
-						}
-						catch (NumberFormatException x) {
-							for (IType t:types) {
-								if (t.getFullyQualifiedName().equals(className)) {
-									sourceType= t;
-									break;
-								}
-							}
-						}
-					}
-				}
-			}
-		} catch (JavaModelException e) {
-			LogUtils.logError(e);
-		}
-		return sourceType;
-  }
 }

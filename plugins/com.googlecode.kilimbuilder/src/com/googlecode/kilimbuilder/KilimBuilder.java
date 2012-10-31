@@ -49,8 +49,6 @@ public class KilimBuilder extends IncrementalProjectBuilder {
 			IResource sourceFile= null;
 			String className= null;
 			try {
-				deleteMarkers(_classfile);
-				
 				// get class name
 				IClassFile classFile= (IClassFile)JavaCore.create(_classfile);
 				IClassFileReader classFileReader= ToolFactory.createDefaultClassFileReader(classFile, IClassFileReader.CLASSFILE_ATTRIBUTES);
@@ -64,6 +62,10 @@ public class KilimBuilder extends IncrementalProjectBuilder {
 					if (type != null)
 						sourceFile= type.getResource();
 				}
+				
+				if (sourceFile != null)
+					deleteMarkers(sourceFile);
+				
 				
 				// get path to class to weave
 				ClassLoader projectClassLoader= PluginUtils.createProjectClassLoader(project);
@@ -81,9 +83,10 @@ public class KilimBuilder extends IncrementalProjectBuilder {
 			} 
 			catch (Throwable e) {
 				if (sourceFile != null) {
-						addMarker(className, sourceFile, e);
+					addMarker(className, sourceFile, e);
 				}
-				LogUtils.logError("Error during Kilim weaving", e);
+				else
+					LogUtils.logError("Kilim Problem", e);
 			}
 			return Status.OK_STATUS;
 		}
@@ -191,7 +194,33 @@ public class KilimBuilder extends IncrementalProjectBuilder {
 						String methodName= methodSig.substring(0, methodSig.indexOf('(')); 
 						msg= methodName+ " method throws Pausable in the base class but not in subclass";
 						
-						IType type= JDTUtils.findSourceType(project, className);
+						IType type= PluginUtils.findType(project, className);
+						if (type != null) {
+							String[] params= JDTUtils.parseForParameterTypes(methodSig);
+							IMethod method= type.getMethod(methodName, params);
+							line= JDTUtils.getLineNumber(type.getCompilationUnit(), method.getSourceRange().getOffset());
+						}
+					}
+					else if (msg.contains("should be marked pausable. It calls pausable methods")) {
+						String methodSig= msg.substring(msg.indexOf("should be marked pausable. It calls pausable methods"));
+						methodSig.trim();
+						String methodName= methodSig.substring(0, methodSig.indexOf('(')); 
+						msg= methodName+ " method should be marked pausable. It calls pausable methods";
+						
+						IType type= PluginUtils.findType(project, className);
+						if (type != null) {
+							String[] params= JDTUtils.parseForParameterTypes(methodSig);
+							IMethod method= type.getMethod(methodName, params);
+							line= JDTUtils.getLineNumber(type.getCompilationUnit(), method.getSourceRange().getOffset());
+						}
+					}
+					else if (msg.contains("from within a synchronized block")) {
+						String methodSig= msg.substring(msg.indexOf("should be marked pausable. It calls pausable methods"));
+						methodSig.trim();
+						String methodName= methodSig.substring(0, methodSig.indexOf('(')); 
+						msg= methodName+ "Cannot call pausable methods from within a synchronized block";
+						
+						IType type= PluginUtils.findType(project, className);
 						if (type != null) {
 							String[] params= JDTUtils.parseForParameterTypes(methodSig);
 							IMethod method= type.getMethod(methodName, params);
