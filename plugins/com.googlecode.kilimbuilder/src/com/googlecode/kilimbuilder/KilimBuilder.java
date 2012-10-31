@@ -196,37 +196,45 @@ public class KilimBuilder extends IncrementalProjectBuilder {
 						
 						IType type= PluginUtils.findType(project, className);
 						if (type != null) {
-							String[] params= JDTUtils.parseForParameterTypes(methodSig);
-							IMethod method= type.getMethod(methodName, params);
+							IMethod method= PluginUtils.findMethod(type, methodSig);
 							line= JDTUtils.getLineNumber(type.getCompilationUnit(), method.getSourceRange().getOffset());
 						}
 					}
 					else if (msg.contains("should be marked pausable. It calls pausable methods")) {
-						String methodSig= msg.substring(msg.indexOf("should be marked pausable. It calls pausable methods"));
+						String methodSig= msg.substring(0, msg.indexOf("should be marked pausable. It calls pausable methods"));
 						methodSig.trim();
+						methodSig= methodSig.replaceAll("/", ".");
 						String methodName= methodSig.substring(0, methodSig.indexOf('(')); 
+						methodName= methodName.substring(methodName.lastIndexOf('.')+1); 
 						msg= "Method should be marked pausable. It calls pausable methods";
 						
 						IType type= PluginUtils.findType(project, className);
 						if (type != null) {
-							String[] params= JDTUtils.parseForParameterTypes(methodSig);
-							IMethod method= type.getMethod(methodName, params);
+							IMethod method= PluginUtils.findMethod(type, methodSig);
 							line= JDTUtils.getLineNumber(type.getCompilationUnit(), method.getSourceRange().getOffset());
 						}
+						
+//						IType type= PluginUtils.findType(project, className);
+//						if (type != null) {
+//							String[] params= JDTUtils.parseForParameterTypes(methodSig);
+//							IMethod method= type.getMethod(methodName, params);
+//							line= JDTUtils.getLineNumber(type.getCompilationUnit(), method.getSourceRange().getOffset());
+//						}
 					}
 					else if (msg.contains("from within a synchronized block")) {
 						String methodMarker= "Caller: ";
 						String methodSig= msg.substring(msg.indexOf(methodMarker)+methodMarker.length());
-						methodSig= methodSig.substring(0, methodSig.indexOf(';'));
+						methodSig= methodSig.substring(0, methodSig.indexOf("Callee:"));
 						methodSig.trim();
+						if (methodSig.endsWith(";"))
+							methodSig= methodSig.substring(0, methodSig.length()-1);
 						String methodName= methodSig.substring(0, methodSig.indexOf('(')); 
 						methodName= methodName.substring(methodName.lastIndexOf('.')+1); 
 						msg= "Method calls Pausable method from within a synchronized block";
 						
 						IType type= PluginUtils.findType(project, className);
 						if (type != null) {
-							String[] params= JDTUtils.parseForParameterTypes(methodSig);
-							IMethod method= type.getMethod(methodName, params);
+							IMethod method= PluginUtils.findMethod(type, methodSig);
 							line= JDTUtils.getLineNumber(type.getCompilationUnit(), method.getSourceRange().getOffset());
 						}
 					}
@@ -245,7 +253,7 @@ public class KilimBuilder extends IncrementalProjectBuilder {
 				marker.setAttribute(IMarker.LINE_NUMBER, line);
 		}
 		catch (CoreException x) { 
-			LogUtils.logError("Error while adding Kilim problem marker", e);
+			LogUtils.logError("Error while adding Kilim problem marker for "+className, x);
 		}
 	}
 	

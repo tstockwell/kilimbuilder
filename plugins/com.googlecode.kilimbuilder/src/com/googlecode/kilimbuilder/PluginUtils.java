@@ -17,6 +17,7 @@ import org.eclipse.core.runtime.IPath;
 import org.eclipse.jdt.core.IClasspathEntry;
 import org.eclipse.jdt.core.IJavaElement;
 import org.eclipse.jdt.core.IJavaProject;
+import org.eclipse.jdt.core.IMethod;
 import org.eclipse.jdt.core.IParent;
 import org.eclipse.jdt.core.IType;
 import org.eclipse.jdt.core.JavaCore;
@@ -213,6 +214,13 @@ public class PluginUtils
 	 * @throws JavaModelException
 	 */
 	public static IType findType(IJavaProject javaProject, final String className) throws JavaModelException {
+		
+		// before we do anything, try the javaProject first
+		{ IType type= javaProject.findType(className);
+			if (type != null && type.exists())
+				return type;
+		}
+		
 		String primaryName= className;
 		int occurence= 0;
 		IType primaryType= null;
@@ -267,5 +275,49 @@ public class PluginUtils
 		}
 
 		return innerType;
+	}
+
+	public static IMethod findMethod(IType type, String methodSig) throws JavaModelException {
+		String methodName= methodSig.substring(0, methodSig.indexOf('(')); 
+		methodName= methodName.substring(methodName.lastIndexOf('.')+1); 
+		
+		String[] params= JDTUtils.parseForParameterTypes(methodSig);
+		IMethod[] methods= type.getMethods();
+		IMethod matchingMethod= null;
+		for (IMethod method:methods) {
+			if (methodName.equals(method.getElementName())) {
+				String[] parameterTypes= method.getParameterTypes();
+				if (parameterTypes.length == params.length) {
+					boolean allParametersMatch= true;
+					for (int i= 0; allParametersMatch && i < params.length; i++) {
+						String p= params[i];
+						String q= parameterTypes[i];
+						if (!p.equals(q)) {
+							if ((p.startsWith("L") || p.startsWith("Q")) && (q.startsWith("L") || q.startsWith("Q"))) {
+								p= p.substring(1);
+								q= q.substring(1);
+								
+								// remove type parameters
+								while (p.contains("<")) {
+									p= p.substring(0, p.indexOf("<"))+p.substring(p.indexOf(">")+1);
+								}
+								while (q.contains("<")) {
+									q= q.substring(0, q.indexOf("<"))+q.substring(q.indexOf(">")+1);
+								}
+								
+								if (!p.equals(q) && !(p.endsWith(q) || q.endsWith(p)))
+									allParametersMatch= false;
+							}
+							else
+								allParametersMatch= false;
+						}
+					}
+					if (allParametersMatch) {
+						return method;
+					}
+				}
+			}
+		}
+		return matchingMethod;
 	}	
 }

@@ -486,8 +486,8 @@ public class JDTUtils {
           char c;
           do {
             c = d.charAt(i++);
-          } while (c != ',' && c != ')');
-          sigs.add("L" + d.substring(off, i - 1) + ";");
+          } while (c != ',' && c != ')' && c != ';');
+          sigs.add(d.substring(off, i));
 
           if (c == ')') {
             return toArray(sigs);
