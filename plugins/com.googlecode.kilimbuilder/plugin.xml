@@ -52,5 +52,13 @@
             value="true">
       </persistent>
    </extension>
+   
+   <extension
+       point="org.eclipse.jdt.core.classpathContainerInitializer">
+      <classpathContainerInitializer
+          id="com.googlecode.kilimbuilder.KilimClasspathContainerInitializer"
+          class="com.googlecode.kilimbuilder.KilimClasspathContainerInitializer"/>
+   </extension>
+   
 
 </plugin>

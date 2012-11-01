@@ -1,7 +1,9 @@
-package com.googlecode.kilimbuilder;
+package com.googlecode.kilimbuilder.utils;
 
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
+
+import com.googlecode.kilimbuilder.KilimActivator;
 
 
 /**
@@ -58,8 +60,7 @@ public class LogUtils {
     * @param exception, a low-level exception, or <code>null</code>
     *           if not applicable.
     */
-	public static void log(int severity, int code, String message,
-			Throwable exception) {
+	public static void log(int severity, int code, String message, Throwable exception) {
 		log(createStatus(severity, code, message, exception));
 	}
 
@@ -83,8 +84,7 @@ public class LogUtils {
     */
    public static IStatus createStatus(int severity, int code, String message,
 			Throwable exception) {
-		return new Status(severity, KilimActivator.PLUGIN_ID, code,
-				message, exception);
+		return new Status(severity, KilimActivator.PLUGIN_ID, code, message, exception);
 	}
 
    /**
@@ -94,5 +94,9 @@ public class LogUtils {
     */
 	public static void log(IStatus status) {
 		KilimActivator.getDefault().getLog().log(status);
+	}
+
+	public static void logWarning(String message) {
+		log(IStatus.ERROR, IStatus.OK, message, null);
 	}
 }

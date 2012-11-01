@@ -22,7 +22,7 @@ import org.osgi.service.prefs.Preferences;
  */
 public class KilimActivator extends AbstractUIPlugin {
 
-	// The plug-in ID
+	// The plug-in CONTAINER_PATH
 	public static final String PLUGIN_ID = "com.googlecode.kilimbuilder";
 
 	// The shared instance
