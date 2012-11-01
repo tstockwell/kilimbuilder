@@ -1,4 +1,4 @@
-package com.googlecode.kilimbuilder;
+package com.googlecode.kilimbuilder.utils;
 
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -30,9 +30,8 @@ import org.eclipse.jdt.core.IType;
 import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.jdt.core.JavaModelException;
 
-import com.googlecode.kilimbuilder.utils.LogUtils;
 
-public class PluginUtils
+public class JDTUtils
 {
 	public static List<IJavaProject> getAllProjects() throws Exception
 	{
