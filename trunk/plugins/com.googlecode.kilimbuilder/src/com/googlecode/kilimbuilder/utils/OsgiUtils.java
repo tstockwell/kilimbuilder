@@ -1,5 +1,6 @@
 package com.googlecode.kilimbuilder.utils;
 
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -10,6 +11,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.WeakHashMap;
 
+import org.eclipse.core.runtime.FileLocator;
 import org.eclipse.osgi.util.ManifestElement;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
@@ -233,6 +235,39 @@ public class OsgiUtils
 			__importedPackages.put(bundle, results);
 		}
 		return results;
+	}
+	
+	public static final List<URL> getBundleClasspathURLs(Bundle bundle) 
+	throws BundleException 
+	{
+		List<URL> urls = new ArrayList<URL>();
+
+		// declared classpath
+		String headers = (String) bundle.getHeaders().get(Constants.BUNDLE_CLASSPATH);
+
+		// TWS - OSGi spec says that if no classpath is specified then ./ is assumed
+		if (headers == null || headers.length() <= 0) {
+			headers="/";
+		}
+
+		ManifestElement[] paths = 
+				ManifestElement.parseHeader(Constants.BUNDLE_CLASSPATH, headers);
+
+		if (paths != null) {
+			for (int i = 0; i < paths.length; i++) {
+				String path = paths[i].getValue();
+				URL url = bundle.getEntry(path);
+				if (url != null)
+					try {
+						URL url2= FileLocator.resolve(url);
+						if (!urls.contains(url2))
+							urls.add(url2);
+					} catch (Throwable t) {
+					}
+			}
+		}
+		
+		return urls;
 	}
 	
 	

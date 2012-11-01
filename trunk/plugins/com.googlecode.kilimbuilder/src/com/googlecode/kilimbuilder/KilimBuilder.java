@@ -33,6 +33,7 @@ import org.eclipse.jdt.core.ToolFactory;
 import org.eclipse.jdt.core.util.IClassFileReader;
 
 import com.googlecode.kilimbuilder.utils.LogUtils;
+import com.googlecode.kilimbuilder.utils.JDTUtils;
 
 @SuppressWarnings("rawtypes")
 public class KilimBuilder extends IncrementalProjectBuilder {
@@ -63,13 +64,13 @@ public class KilimBuilder extends IncrementalProjectBuilder {
 				 * containing type has compilation errors, we to not run the Kilim weaver until 
 				 * the top-level type is free of compile errors.  
 				 */
-				String containingType= PluginUtils.isAnonymousTypeOrHasAnonymousContainingType(className);
+				String containingType= JDTUtils.isAnonymousTypeOrHasAnonymousContainingType(className);
 				if (containingType != null) {
-					IType type= PluginUtils.findType(project, containingType);
+					IType type= JDTUtils.findType(project, containingType);
 					if (type == null || !type.exists()) {
 						return Status.OK_STATUS; // could not find top level type, do nothing
 					}
-					IMarker[] errorMarkers= PluginUtils.findJavaErrorMarkers(project, type);
+					IMarker[] errorMarkers= JDTUtils.findJavaErrorMarkers(project, type);
 					if (0 < errorMarkers.length) {
 						return Status.OK_STATUS; // containing type has errors, skip for now
 					}
@@ -78,7 +79,7 @@ public class KilimBuilder extends IncrementalProjectBuilder {
 				// find source file if we can
 				IType type= null;
 				synchronized (__projectAccess) { // dont know why, but this prevents Eclipse from locking up
-					type= PluginUtils.findType(project, className);
+					type= JDTUtils.findType(project, className);
 					if (type != null)
 						sourceFile= type.getResource();
 				}
@@ -88,7 +89,7 @@ public class KilimBuilder extends IncrementalProjectBuilder {
 				
 				
 				// get path to class to weave
-				ClassLoader projectClassLoader= PluginUtils.createProjectClassLoader(project);
+				ClassLoader projectClassLoader= JDTUtils.createProjectClassLoader(project);
 				Detector detector= new Detector(new RuntimeClassMirrors(projectClassLoader));
 				InputStream classContents= new BufferedInputStream(_classfile.getContents());
 				try {
@@ -195,7 +196,7 @@ public class KilimBuilder extends IncrementalProjectBuilder {
 	}
 	private void addMarker(String className, IResource sourceFile, Throwable e) {
 		try {
-			IJavaProject project= PluginUtils.getJavaProject(sourceFile);
+			IJavaProject project= JDTUtils.getJavaProject(sourceFile);
 
 			// try to extract kilim message
 			int line= -1;
@@ -213,10 +214,10 @@ public class KilimBuilder extends IncrementalProjectBuilder {
 						methodSig.trim();
 						msg= "Method throws Pausable in the base class but not in subclass";
 						
-						IType type= PluginUtils.findType(project, className);
+						IType type= JDTUtils.findType(project, className);
 						if (type != null) {
-							IMethod method= PluginUtils.findMethod(type, methodSig);
-							line= PluginUtils.getLineNumber(type.getCompilationUnit(), method.getSourceRange().getOffset());
+							IMethod method= JDTUtils.findMethod(type, methodSig);
+							line= JDTUtils.getLineNumber(type.getCompilationUnit(), method.getSourceRange().getOffset());
 						}
 					}
 					else if (msg.contains("should be marked pausable. It calls pausable methods")) {
@@ -227,10 +228,10 @@ public class KilimBuilder extends IncrementalProjectBuilder {
 						methodName= methodName.substring(methodName.lastIndexOf('.')+1); 
 						msg= "Method should be marked pausable. It calls pausable methods";
 						
-						IType type= PluginUtils.findType(project, className);
+						IType type= JDTUtils.findType(project, className);
 						if (type != null) {
-							IMethod method= PluginUtils.findMethod(type, methodSig);
-							line= PluginUtils.getLineNumber(type.getCompilationUnit(), method.getSourceRange().getOffset());
+							IMethod method= JDTUtils.findMethod(type, methodSig);
+							line= JDTUtils.getLineNumber(type.getCompilationUnit(), method.getSourceRange().getOffset());
 						}
 					}
 					else if (msg.contains("from within a synchronized block")) {
@@ -244,10 +245,10 @@ public class KilimBuilder extends IncrementalProjectBuilder {
 						methodName= methodName.substring(methodName.lastIndexOf('.')+1); 
 						msg= "Method calls Pausable method from within a synchronized block";
 						
-						IType type= PluginUtils.findType(project, className);
+						IType type= JDTUtils.findType(project, className);
 						if (type != null) {
-							IMethod method= PluginUtils.findMethod(type, methodSig);
-							line= PluginUtils.getLineNumber(type.getCompilationUnit(), method.getSourceRange().getOffset());
+							IMethod method= JDTUtils.findMethod(type, methodSig);
+							line= JDTUtils.getLineNumber(type.getCompilationUnit(), method.getSourceRange().getOffset());
 						}
 					}
 					break;
