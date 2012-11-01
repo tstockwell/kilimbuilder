@@ -5,6 +5,7 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
@@ -13,11 +14,14 @@ import org.eclipse.core.resources.IContainer;
 import org.eclipse.core.resources.IMarker;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IResource;
+import org.eclipse.core.resources.IWorkspaceRoot;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.jdt.core.IClasspathEntry;
+import org.eclipse.jdt.core.ICompilationUnit;
 import org.eclipse.jdt.core.IJavaElement;
+import org.eclipse.jdt.core.IJavaModel;
 import org.eclipse.jdt.core.IJavaModelMarker;
 import org.eclipse.jdt.core.IJavaProject;
 import org.eclipse.jdt.core.IMethod;
@@ -25,6 +29,8 @@ import org.eclipse.jdt.core.IParent;
 import org.eclipse.jdt.core.IType;
 import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.jdt.core.JavaModelException;
+
+import com.googlecode.kilimbuilder.utils.LogUtils;
 
 public class PluginUtils
 {
@@ -278,7 +284,7 @@ public class PluginUtils
 		String methodName= methodSig.substring(0, methodSig.indexOf('(')); 
 		methodName= methodName.substring(methodName.lastIndexOf('.')+1); 
 		
-		String[] params= JDTUtils.parseForParameterTypes(methodSig);
+		String[] params= parseForParameterTypes(methodSig);
 		IMethod[] methods= type.getMethods();
 		IMethod matchingMethod= null;
 		for (IMethod method:methods) {
@@ -394,5 +400,200 @@ public class PluginUtils
 			}
 		}
 		return null;
-	}	
+	}
+
+	public static IJavaProject getJavaProject(IResource appJar) {
+	    if (appJar == null) {
+	      throw new IllegalArgumentException("appJar is null");
+	    }
+	    String projectName = appJar.getProject().getName();
+	    return getJavaProject(projectName);
+	  }
+
+	public static IJavaProject getJavaProject(String projectName) {
+	    if (projectName == null) {
+	      throw new IllegalArgumentException("null projectName");
+	    }
+	    IWorkspaceRoot workspaceRoot = ResourcesPlugin.getWorkspace().getRoot();
+	    IJavaModel javaModel = JavaCore.create(workspaceRoot);
+	    IJavaProject javaProject = javaModel.getJavaProject(projectName);
+	    return javaProject;
+	  }
+
+	public static int getLineNumber(ICompilationUnit cUnit, int offSet) {
+		  return getLineNumFromOffset(cUnit, offSet);
+	  }
+
+	/**
+	   * Get the line number for the given offset in the given ICompilationUnit
+	   *
+	   * @param ICompilationUnit
+	   * @param int offSet
+	   *
+	   * @return int lineNumber
+	   */
+	  private static int getLineNumFromOffset(ICompilationUnit cUnit, int offSet){
+		  try {
+			  String source = cUnit.getSource();
+			  IType type = cUnit.findPrimaryType();
+			  if(type != null) {
+				  String sourcetodeclaration = source.substring(0, offSet);
+				  int lines = 0;
+				  char[] chars = new char[sourcetodeclaration.length()];
+				  sourcetodeclaration.getChars(
+						  0,
+						  sourcetodeclaration.length(),
+						  chars,
+						  0);
+				  for (int i = 0; i < chars.length; i++) {
+					  if (chars[i] == '\n') {
+						  lines++;
+					  }
+				  }
+				  return lines + 1;
+			  }
+		  } catch (JavaModelException jme) {
+			  LogUtils.logError(jme);
+		  }
+		  return 0;      
+	  }
+
+	public static String parseForName(String selector, IType type) {
+	    if (selector == null) {
+	      throw new IllegalArgumentException("selector is null");
+	    }
+	    try {
+	      String result = selector.substring(0, selector.indexOf('('));
+	      if (result.equals("<init>")) {
+	        return type.getElementName();
+	      } else {
+	        return result;
+	      }
+	    } catch (StringIndexOutOfBoundsException e) {
+	      throw new IllegalArgumentException("invalid selector: " + selector);
+	    }
+	  }
+
+	public static final String[] parseForParameterTypes(String selector) throws IllegalArgumentException {
+	
+	    try {
+	      if (selector == null) {
+	        throw new IllegalArgumentException("selector is null");
+	      }
+	      String d = selector.substring(selector.indexOf('('));
+	      if (d.length() <= 2) {
+	        throw new IllegalArgumentException("invalid descriptor: " + d);
+	
+	      }
+	      if (d.charAt(0) != '(') {
+	        throw new IllegalArgumentException("invalid descriptor: " + d);
+	      }
+	
+	      ArrayList<String> sigs = new ArrayList<String>(10);
+	
+	      int i = 1;
+	      while (true) {
+	        switch (d.charAt(i++)) {
+	        case VoidTypeCode:
+	          sigs.add(VoidName);
+	          continue;
+	        case BooleanTypeCode:
+	          sigs.add(BooleanName);
+	          continue;
+	        case ByteTypeCode:
+	          sigs.add(ByteName);
+	          continue;
+	        case ShortTypeCode:
+	          sigs.add(ShortName);
+	          continue;
+	        case IntTypeCode:
+	          sigs.add(IntName);
+	          continue;
+	        case LongTypeCode:
+	          sigs.add(LongName);
+	          continue;
+	        case FloatTypeCode:
+	          sigs.add(FloatName);
+	          continue;
+	        case DoubleTypeCode:
+	          sigs.add(DoubleName);
+	          continue;
+	        case CharTypeCode:
+	          sigs.add(CharName);
+	          continue;
+	        case ArrayTypeCode: {
+	          int off = i - 1;
+	          while (d.charAt(i) == ArrayTypeCode) {
+	            ++i;
+	          }
+	          if (d.charAt(i++) == ClassTypeCode) {
+	            while (d.charAt(i++) != ';')
+	              ;
+	            sigs.add(d.substring(off, i).replaceAll("/", "."));
+	          } else {
+	            sigs.add(d.substring(off, i));
+	          }
+	          continue;
+	        }
+	        case (byte) ')': // end of parameter list
+	          return toArray(sigs);
+	        default: {
+	          // a class
+	          int off = i - 1;
+	          char c;
+	          do {
+	            c = d.charAt(i++);
+	          } while (c != ',' && c != ')' && c != ';');
+	          sigs.add(d.substring(off, i));
+	
+	          if (c == ')') {
+	            return toArray(sigs);
+	          }
+	
+	          continue;
+	        }
+	        }
+	      }
+	    } catch (StringIndexOutOfBoundsException e) {
+	      throw new IllegalArgumentException("error parsing selector " + selector);
+	    }
+	  }
+
+	public final static byte ArrayTypeCode = '[';
+	/*********************************************************************************************************************
+	   * Primitive Dispatch *
+	   ********************************************************************************************************************/
+	
+	  public final static String BooleanName = Boolean.TYPE.getName();
+	public final static byte BooleanTypeCode = 'Z';
+	public final static String ByteName = Byte.TYPE.getName();
+	public final static byte ByteTypeCode = 'B';
+	public final static String CharName = Character.TYPE.getName();
+	public final static byte CharTypeCode = 'C';
+	public final static byte ClassTypeCode = 'L';
+	public final static String DoubleName = Double.TYPE.getName();
+	public final static byte DoubleTypeCode = 'D';
+	public final static String FloatName = Float.TYPE.getName();
+	public final static byte FloatTypeCode = 'F';
+	public final static String IntName = Integer.TYPE.getName();
+	public final static byte IntTypeCode = 'I';
+	public final static String LongName = Long.TYPE.getName();
+	public final static byte LongTypeCode = 'J';
+	public final static byte OtherPrimitiveTypeCode = 'P';
+	public final static String ShortName = Short.TYPE.getName();
+	public final static byte ShortTypeCode = 'S';
+	public final static String VoidName = Void.TYPE.getName();
+	public final static byte VoidTypeCode = 'V';
+	private static String[] toArray(ArrayList<String> sigs) {
+	    int size = sigs.size();
+	    if (size == 0) {
+	      return new String[0];
+	    }
+	    Iterator<String> it = sigs.iterator();
+	    String[] result = new String[size];
+	    for (int j = 0; j < size; j++) {
+	      result[j] = it.next();
+	    }
+	    return result;
+	  }	
 }

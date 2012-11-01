@@ -5,38 +5,72 @@ import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IProjectDescription;
 import org.eclipse.core.resources.IProjectNature;
 import org.eclipse.core.runtime.CoreException;
+import org.eclipse.jdt.core.IClasspathEntry;
+import org.eclipse.jdt.core.IJavaProject;
+import org.eclipse.jdt.core.JavaCore;
+import org.eclipse.jdt.core.JavaModelException;
 
 public class KilimNature implements IProjectNature {
 
 	/**
-	 * ID of this project nature
+	 * CONTAINER_PATH of this project nature
 	 */
 	public static final String KILIM_NATURE_ID = "com.googlecode.kilimbuilder.kilimNature";
 
 	private IProject project;
-
+	
 	/*
 	 * (non-Javadoc)
 	 * 
 	 * @see org.eclipse.core.resources.IProjectNature#configure()
 	 */
 	public void configure() throws CoreException {
-		IProjectDescription desc = project.getDescription();
-		ICommand[] commands = desc.getBuildSpec();
+		addBuilderToProject();
+		
+		addClassEntryEntryToProject();
+		
+	}
 
-		for (int i = 0; i < commands.length; ++i) {
-			if (commands[i].getBuilderName().equals(KilimBuilder.BUILDER_ID)) {
-				return;
+	// add Kilim library to classpath
+	private void addClassEntryEntryToProject() throws CoreException, JavaModelException {
+        IJavaProject javaProject = (IJavaProject)project.getNature(JavaCore.NATURE_ID);
+        IClasspathEntry[] rawClasspath = javaProject.getRawClasspath();
+		boolean alreadyConfigured= false;
+		for (int i = 0; i < rawClasspath.length; ++i) {
+			if (KilimClasspathContainer.CONTAINER_PATH.equals(rawClasspath[i].getPath())) {
+				alreadyConfigured= true;
+				break;
 			}
 		}
+		if (!alreadyConfigured) {
+	        IClasspathEntry[] newClasspath = new IClasspathEntry[rawClasspath.length+1];
+			System.arraycopy(rawClasspath, 0, newClasspath, 0, rawClasspath.length);
+            IClasspathEntry kilimEntry = JavaCore.newContainerEntry(KilimClasspathContainer.CONTAINER_PATH);
+            newClasspath[newClasspath.length - 1] = kilimEntry;
+	        javaProject.setRawClasspath(newClasspath,null);
+		}
+	}
 
-		ICommand[] newCommands = new ICommand[commands.length + 1];
-		System.arraycopy(commands, 0, newCommands, 0, commands.length);
-		ICommand command = desc.newCommand();
-		command.setBuilderName(KilimBuilder.BUILDER_ID);
-		newCommands[newCommands.length - 1] = command;
-		desc.setBuildSpec(newCommands);
-		project.setDescription(desc, null);
+	// add Kilim builder to build specification
+	private void addBuilderToProject() throws CoreException {
+		IProjectDescription projectDescription= project.getDescription();
+		ICommand[] commands = projectDescription.getBuildSpec();
+		boolean alreadyConfigured= false;
+		for (int i = 0; i < commands.length; ++i) {
+			if (commands[i].getBuilderName().equals(KilimBuilder.BUILDER_ID)) {
+				alreadyConfigured= true;
+				break;
+			}
+		}
+		if (!alreadyConfigured) {
+			ICommand[] newCommands = new ICommand[commands.length + 1];
+			System.arraycopy(commands, 0, newCommands, 0, commands.length);
+			ICommand command = projectDescription.newCommand();
+			command.setBuilderName(KilimBuilder.BUILDER_ID);
+			newCommands[newCommands.length - 1] = command;
+			projectDescription.setBuildSpec(newCommands);
+			project.setDescription(projectDescription, null);
+		}
 	}
 
 	/*
@@ -75,7 +109,7 @@ public class KilimNature implements IProjectNature {
 	 * @see org.eclipse.core.resources.IProjectNature#setProject(org.eclipse.core.resources.IProject)
 	 */
 	public void setProject(IProject project) {
-		this.project = project;
+			this.project = project;
 	}
 
 }
