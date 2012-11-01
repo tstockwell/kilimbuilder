@@ -10,12 +10,15 @@ import java.util.List;
 import java.util.Set;
 
 import org.eclipse.core.resources.IContainer;
+import org.eclipse.core.resources.IMarker;
 import org.eclipse.core.resources.IProject;
+import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.jdt.core.IClasspathEntry;
 import org.eclipse.jdt.core.IJavaElement;
+import org.eclipse.jdt.core.IJavaModelMarker;
 import org.eclipse.jdt.core.IJavaProject;
 import org.eclipse.jdt.core.IMethod;
 import org.eclipse.jdt.core.IParent;
@@ -215,12 +218,6 @@ public class PluginUtils
 	 */
 	public static IType findType(IJavaProject javaProject, final String className) throws JavaModelException {
 		
-		// before we do anything, try the javaProject first
-		{ IType type= javaProject.findType(className);
-			if (type != null && type.exists())
-				return type;
-		}
-		
 		String primaryName= className;
 		int occurence= 0;
 		IType primaryType= null;
@@ -319,5 +316,83 @@ public class PluginUtils
 			}
 		}
 		return matchingMethod;
+	}
+	
+	/*
+	 * @return true if the given class name denotes an anonymous class.
+	 */
+	public static boolean isAnonymousType(String className) {
+		int i= className.lastIndexOf('$');
+		if (0 < i) {
+			try {
+				Integer.parseInt(className.substring(i+1));
+				return true;
+			}
+			catch (NumberFormatException x) {
+			}
+		}
+		
+		return false;
+	}	
+	
+	/*
+	 * If the given class name denotes an inner class then this method returns 
+	 * the containing type.
+	 * If the name denotes an anonymous type then the containg top-level type 
+	 * or a named inner type is returned.  
+	 */
+	public static String findOuterType(String className) {
+		String containingType= className;
+		int i= containingType.lastIndexOf('$');
+		if (i <= 0)
+			return className; // not an inner type
+
+		containingType= containingType.substring(0, i);
+		int occurence= 0;
+		try {
+			occurence= Integer.parseInt(containingType.substring(i+1));
+		}
+		catch (NumberFormatException x) {
+		}
+		
+		if (occurence <= 0)
+			return containingType; // containingType type is not anonymous, we can return it.
+		
+		return findOuterType(containingType);
+	}
+	
+
+	public static IMarker[] findJavaErrorMarkers(IJavaProject javaProject, IType type) throws CoreException {
+		IProject project= javaProject.getProject();
+		ArrayList<IMarker> list= new ArrayList<IMarker>();
+		IMarker [] markers = project.findMarkers(IJavaModelMarker.JAVA_MODEL_PROBLEM_MARKER, false, IResource.DEPTH_INFINITE);
+		for (int a = 0; a < markers.length; a++)
+		{
+			IMarker marker = markers[a];
+			Object severity = marker.getAttribute(IMarker.SEVERITY);
+			if (((Integer) severity).intValue() == IMarker.SEVERITY_ERROR)
+			{
+				list.add(marker);
+			}
+		}
+		return list.toArray(new IMarker[list.size()]);
+	}
+
+	/**
+	 * @return if the given type name is an anonymous type or has an anonymous 
+	 * containing type then the innermost containing type which has no 
+	 * anonymous containing types is returned. 
+	 * A null is returned if the given type is not anonymous and has no 
+	 * anonymous containing types.
+	 */
+	public static String isAnonymousTypeOrHasAnonymousContainingType(String className) {
+		for (int i= 0; i < className.length(); i++) {
+			char c= className.charAt(i);
+			if (Character.isDigit(c) && className.charAt(i-1) == '$') {
+				String containingType= className.substring(0, i-1);
+				return containingType;
+			}
+		}
+		return null;
 	}	
 }

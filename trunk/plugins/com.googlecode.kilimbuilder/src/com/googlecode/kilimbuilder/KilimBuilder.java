@@ -55,6 +55,24 @@ public class KilimBuilder extends IncrementalProjectBuilder {
 				className= new String(classFileReader.getClassName()).replace('/', '.');
 				IJavaProject project= classFile.getJavaProject();
 				
+				/*
+				 * Because it is not possible, without analyzing source code, to 
+				 * accurately locate and mark errors in anonymous types when the 
+				 * containing type has compilation errors, we to not run the Kilim weaver until 
+				 * the top-level type is free of compile errors.  
+				 */
+				String containingType= PluginUtils.isAnonymousTypeOrHasAnonymousContainingType(className);
+				if (containingType != null) {
+					IType type= PluginUtils.findType(project, containingType);
+					if (type == null || !type.exists()) {
+						return Status.OK_STATUS; // could not find top level type, do nothing
+					}
+					IMarker[] errorMarkers= PluginUtils.findJavaErrorMarkers(project, type);
+					if (0 < errorMarkers.length) {
+						return Status.OK_STATUS; // containing type has errors, skip for now
+					}
+				}
+				
 				// find source file if we can
 				IType type= null;
 				synchronized (__projectAccess) { // dont know why, but this prevents Eclipse from locking up
