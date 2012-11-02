@@ -1,9 +1,9 @@
 package com.googlecode.kilimbuilder;
 
+import java.util.ArrayList;
 import java.util.Iterator;
 
 import org.eclipse.core.resources.IProject;
-import org.eclipse.core.resources.IProjectDescription;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IAdaptable;
 import org.eclipse.jface.action.IAction;
@@ -12,6 +12,7 @@ import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.ui.IObjectActionDelegate;
 import org.eclipse.ui.IWorkbenchPart;
 
+import com.googlecode.kilimbuilder.utils.JDTUtils;
 import com.googlecode.kilimbuilder.utils.LogUtils;
 
 public class ToggleNatureAction implements IObjectActionDelegate {
@@ -34,7 +35,11 @@ public class ToggleNatureAction implements IObjectActionDelegate {
 					project = (IProject) ((IAdaptable) element).getAdapter(IProject.class);
 				}
 				if (project != null) {
-					toggleNature(project);
+					try {
+						JDTUtils.toggleNature(project, KilimNature.KILIM_NATURE_ID);
+					} catch (CoreException e) {
+						LogUtils.logError(e);
+					}
 				}
 			}
 		}
@@ -47,7 +52,52 @@ public class ToggleNatureAction implements IObjectActionDelegate {
 	 *      org.eclipse.jface.viewers.ISelection)
 	 */
 	public void selectionChanged(IAction action, ISelection selection) {
-		this.selection = selection;
+		try {
+			this.selection = selection;
+			ArrayList<IProject> projects= new ArrayList<IProject>();
+			if (selection instanceof IStructuredSelection) {
+				for (Iterator<?> it = ((IStructuredSelection) selection).iterator(); it.hasNext();) {
+					Object element = it.next();
+					IProject project = null;
+					if (element instanceof IProject) {
+						project = (IProject) element;
+					} else if (element instanceof IAdaptable) {
+						project = (IProject) ((IAdaptable) element).getAdapter(IProject.class);
+					}
+					if (project != null) {
+						projects.add(project);
+					}
+				}
+			}
+			if (projects.isEmpty()) {
+				action.setEnabled(false);
+			}
+			else {
+				action.setEnabled(true);
+				boolean containsNature= JDTUtils.projectContainsNature(projects.get(0), KilimNature.KILIM_NATURE_ID);
+				boolean projectsAreConsistent= true;
+				for (int i= 1; i < projects.size(); i++) {
+					if (containsNature != JDTUtils.projectContainsNature(projects.get(i), KilimNature.KILIM_NATURE_ID)) {
+						projectsAreConsistent= false;
+						break;
+					}
+				}
+				if (!projectsAreConsistent) {
+					action.setEnabled(false);
+				}
+				else {
+					action.setEnabled(true);
+					if (containsNature) {
+						action.setText("Remove Kilim Nature");
+					}
+					else
+						action.setText("Add Kilim Nature");
+				}
+			}
+		} catch (CoreException e) {
+			action.setEnabled(false);
+			LogUtils.logError(e);
+		}
 	}
 
 	/*
@@ -59,39 +109,5 @@ public class ToggleNatureAction implements IObjectActionDelegate {
 	public void setActivePart(IAction action, IWorkbenchPart targetPart) {
 	}
 
-	/**
-	 * Toggles sample nature on a project
-	 * 
-	 * @param project
-	 *            to have sample nature added or removed
-	 */
-	private void toggleNature(IProject project) {
-		try {
-			IProjectDescription description = project.getDescription();
-			String[] natures = description.getNatureIds();
-
-			for (int i = 0; i < natures.length; ++i) {
-				if (KilimNature.KILIM_NATURE_ID.equals(natures[i])) {
-					// Remove the nature
-					String[] newNatures = new String[natures.length - 1];
-					System.arraycopy(natures, 0, newNatures, 0, i);
-					System.arraycopy(natures, i + 1, newNatures, i,
-							natures.length - i - 1);
-					description.setNatureIds(newNatures);
-					project.setDescription(description, null);
-					return;
-				}
-			}
-
-			// Add the nature
-			String[] newNatures = new String[natures.length + 1];
-			System.arraycopy(natures, 0, newNatures, 0, natures.length);
-			newNatures[natures.length] = KilimNature.KILIM_NATURE_ID;
-			description.setNatureIds(newNatures);
-			project.setDescription(description, null);
-		} catch (CoreException e) {
-			LogUtils.logError(e);
-		}
-	}
 
 }
