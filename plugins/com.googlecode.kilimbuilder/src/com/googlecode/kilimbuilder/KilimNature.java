@@ -89,7 +89,19 @@ public class KilimNature implements IProjectNature {
 						commands.length - i - 1);
 				description.setBuildSpec(newCommands);
 				project.setDescription(description, null);			
-				return;
+				break;
+			}
+		}
+		
+        IJavaProject javaProject = (IJavaProject)project.getNature(JavaCore.NATURE_ID);
+        IClasspathEntry[] rawClasspath = javaProject.getRawClasspath();
+		for (int i = 0; i < rawClasspath.length; ++i) {
+			if (KilimClasspathContainer.CONTAINER_PATH.equals(rawClasspath[i].getPath())) {
+		        IClasspathEntry[] newClasspath = new IClasspathEntry[rawClasspath.length-1];
+				System.arraycopy(rawClasspath, 0, newClasspath, 0, i);
+				System.arraycopy(rawClasspath, i + 1, newClasspath, i, rawClasspath.length - i - 1);
+				javaProject.setRawClasspath(newClasspath, null);			
+				break;
 			}
 		}
 	}
