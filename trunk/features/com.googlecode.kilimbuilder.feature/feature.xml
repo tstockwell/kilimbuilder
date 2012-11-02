@@ -1,33 +1,44 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <feature
       id="com.googlecode.kilimbuilder"
-      label="Kilimbuilder"
-      version="1.0.0"
+      label="Kilim For Eclipse"
+      version="0.9.0"
       provider-name="Ted Stockwell">
 
-   <description url="http://www.example.com/description">
-      [Enter Feature Description here.]
+   <description url="https://code.google.com/p/kilimbuilder/">
+      Kilim is a framework for Java that provides ultra-lightweight threads and facilities for sending messages between these threads. Kilim uses bytecode instrumentation to weave thread management into your code. This Eclipse plugin makes it easy to add Kilim support to your Eclipse Java projects.
+
+Just add Kilim library to your Eclipse Java project, then enable this builder and your classes will automagically be instrumented to work with Kilim.
+
+See http://www.malhar.net/sriram/kilim/ for more information about Kilim.
    </description>
 
    <copyright url="http://www.example.com/copyright">
       [Enter Copyright Description here.]
    </copyright>
 
-   <license url="http://www.example.com/license">
-      [Enter License Description here.]
+   <license url="http://www.apache.org/licenses/LICENSE-2.0">
+      Apache License, Version 2
    </license>
 
    <plugin
          id="kilim"
          download-size="0"
          install-size="0"
-         version="0.0.0"/>
+         version="0.9.0"/>
 
    <plugin
-         id="kilim.builder"
+         id="com.googlecode.kilimbuilder"
          download-size="0"
          install-size="0"
-         version="0.0.0"
+         version="0.9.0"
+         unpack="false"/>
+
+   <plugin
+         id="com.googlecode.kilimbuilder.library.asm"
+         download-size="0"
+         install-size="0"
+         version="2.2.3"
          unpack="false"/>
 
 </feature>

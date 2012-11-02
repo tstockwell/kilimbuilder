@@ -13,6 +13,7 @@ import java.util.Set;
 import org.eclipse.core.resources.IContainer;
 import org.eclipse.core.resources.IMarker;
 import org.eclipse.core.resources.IProject;
+import org.eclipse.core.resources.IProjectDescription;
 import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.IWorkspaceRoot;
 import org.eclipse.core.resources.ResourcesPlugin;
@@ -29,6 +30,8 @@ import org.eclipse.jdt.core.IParent;
 import org.eclipse.jdt.core.IType;
 import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.jdt.core.JavaModelException;
+
+import com.googlecode.kilimbuilder.KilimNature;
 
 
 public class JDTUtils
@@ -594,5 +597,65 @@ public class JDTUtils
 	      result[j] = it.next();
 	    }
 	    return result;
-	  }	
+	  }
+
+	public static boolean projectContainsNature(IProject project, String natureId) 
+	throws CoreException 
+	{
+		IProjectDescription description = project.getDescription();
+		String[] natures = description.getNatureIds();
+
+		for (int i = 0; i < natures.length; ++i) {
+			if (KilimNature.KILIM_NATURE_ID.equals(natures[i])) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	public static void toggleNature(IProject project, String natureId) 
+	throws CoreException 
+	{
+		if (projectContainsNature(project, natureId)) {
+			removeNatureFromProject(project, natureId);
+		}
+		else
+			addNatureToproject(project, natureId);
+	}
+
+	public static void addNatureToproject(IProject project, String natureId) throws CoreException {
+		IProjectDescription description = project.getDescription();
+		String[] natures = description.getNatureIds();
+
+		for (int i = 0; i < natures.length; ++i) {
+			if (natureId.equals(natures[i])) {
+				return; // project already has nature 
+			}
+		}
+
+		// Add the nature
+		String[] newNatures = new String[natures.length + 1];
+		System.arraycopy(natures, 0, newNatures, 0, natures.length);
+		newNatures[natures.length] = KilimNature.KILIM_NATURE_ID;
+		description.setNatureIds(newNatures);
+		project.setDescription(description, null);
+	}
+
+	public static void removeNatureFromProject(IProject project, String natureId) throws CoreException {
+		IProjectDescription description = project.getDescription();
+		String[] natures = description.getNatureIds();
+
+		for (int i = 0; i < natures.length; ++i) {
+			if (natureId.equals(natures[i])) {
+				// Remove the nature
+				String[] newNatures = new String[natures.length - 1];
+				System.arraycopy(natures, 0, newNatures, 0, i);
+				System.arraycopy(natures, i + 1, newNatures, i,
+						natures.length - i - 1);
+				description.setNatureIds(newNatures);
+				project.setDescription(description, null);
+				return;
+			}
+		}
+	}	
 }
