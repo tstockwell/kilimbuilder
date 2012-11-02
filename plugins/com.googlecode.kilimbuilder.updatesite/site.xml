@@ -1,12 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <site>
-   <description name="Kilim For Eclipse Update Site" url="http://kilimbuilder.googlecode.com/svn/trunk/plugins/com.googlecode.kilimbuilder.updatesite/">
+   <description name="Kilim For Eclipse Update Site" url="index.html">
       The Kilim For Eclipse Update Site contains feature and plug-in versions for Kilim For Eclipse project releases.
    </description>
-   <feature url="features/com.googlecode.kilimbuilder_0.9.0.jar" id="com.googlecode.kilimbuilder" version="0.9.0"/>
+   <feature url="features/com.googlecode.kilimbuilder_0.9.0.jar" id="com.googlecode.kilimbuilder" version="0.9.0">
+      <category name="com.googlecode.kilimbuilder.category"/>
+   </feature>
    <archive path="plugins/com.googlecode.kilimbuilder_0.9.0.jar" url="plugins/com.googlecode.kilimbuilder_0.9.0.jar"/>
-   <archive path="plugins\com.googlecode.kilimbuilder.library.asm_2.2.3.jar" url="plugins\com.googlecode.kilimbuilder.library.asm_2.2.3.jar"/>
-   <archive path="plugins\kilim_0.9.0.jar" url="plugins\kilim_0.9.0.jar"/>
+   <archive path="plugins/com.googlecode.kilimbuilder.library.asm_2.2.3.jar" url="plugins/com.googlecode.kilimbuilder.library.asm_2.2.3.jar"/>
+   <archive path="plugins/kilim_0.9.0.jar" url="plugins/kilim_0.9.0.jar"/>
    <category-def name="com.googlecode.kilimbuilder.category" label="Kilim For Eclipse">
       <description>
          An Eclipse plugin for Kilim
