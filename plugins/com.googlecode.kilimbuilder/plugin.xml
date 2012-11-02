@@ -56,7 +56,7 @@
    <extension
        point="org.eclipse.jdt.core.classpathContainerInitializer">
       <classpathContainerInitializer
-          id="com.googlecode.kilimbuilder.KilimClasspathContainerInitializer"
+          id="com.googlecode.kilimbuilder.KILIM_CONTAINER"
           class="com.googlecode.kilimbuilder.KilimClasspathContainerInitializer"/>
    </extension>
    
