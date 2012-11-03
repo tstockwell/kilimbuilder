@@ -60,5 +60,9 @@
           class="com.googlecode.kilimbuilder.KilimClasspathContainerInitializer"/>
    </extension>
    
+	<extension point="org.eclipse.ui.startup">
+  		<startup class="com.googlecode.kilimbuilder.KilimStartup"/>
+   </extension>
+   
 
 </plugin>
