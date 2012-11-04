@@ -284,7 +284,6 @@ public class KilimBuilder extends IncrementalProjectBuilder {
 	protected void clean(IProgressMonitor monitor) throws CoreException {
 		try {
 			getProject().accept(new IResourceVisitor() {
-				@Override
 				public boolean visit(IResource resource) throws CoreException {
 					clean(resource);
 					//return true to continue visiting children.
