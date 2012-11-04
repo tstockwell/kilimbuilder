@@ -34,11 +34,4 @@ See http://www.malhar.net/sriram/kilim/ for more information about Kilim.
          version="0.9.0"
          unpack="false"/>
 
-   <plugin
-         id="com.googlecode.kilimbuilder.library.asm"
-         download-size="0"
-         install-size="0"
-         version="2.2.3"
-         unpack="false"/>
-
 </feature>

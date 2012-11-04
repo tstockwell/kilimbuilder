@@ -4,12 +4,15 @@ import java.io.BufferedInputStream;
 import java.io.InputStream;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.StringTokenizer;
+import java.util.regex.Pattern;
 
 import kilim.KilimException;
 import kilim.mirrors.Detector;
 import kilim.mirrors.RuntimeClassMirrors;
 import kilim.tools.Weaver;
 
+import org.eclipse.core.resources.IContainer;
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IMarker;
 import org.eclipse.core.resources.IProject;
@@ -20,6 +23,7 @@ import org.eclipse.core.resources.IResourceVisitor;
 import org.eclipse.core.resources.IncrementalProjectBuilder;
 import org.eclipse.core.resources.WorkspaceJob;
 import org.eclipse.core.runtime.CoreException;
+import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
@@ -57,6 +61,12 @@ public class KilimBuilder extends IncrementalProjectBuilder {
 				IClassFileReader classFileReader= ToolFactory.createDefaultClassFileReader(classFile, IClassFileReader.CLASSFILE_ATTRIBUTES);
 				className= new String(classFileReader.getClassName()).replace('/', '.');
 				IJavaProject project= classFile.getJavaProject();
+				IContainer outputLocation= _classfile.getParent();
+				{ 
+					for (int i= className.split(Pattern.quote(".")).length; 1 < i--;) {
+						outputLocation= outputLocation.getParent();
+					}
+				}
 				
 				/*
 				 * Because it is not possible, without analyzing source code, to 
@@ -93,7 +103,7 @@ public class KilimBuilder extends IncrementalProjectBuilder {
 				Detector detector= new Detector(new RuntimeClassMirrors(projectClassLoader));
 				InputStream classContents= new BufferedInputStream(_classfile.getContents());
 				try {
-					Weaver.weaveFile(className, classContents, detector);
+					Weaver.weaveFile(className, classContents, detector, outputLocation.getRawLocation().toOSString());
 				}
 				finally {
 					try { classContents.close(); } catch (Throwable t) { }
