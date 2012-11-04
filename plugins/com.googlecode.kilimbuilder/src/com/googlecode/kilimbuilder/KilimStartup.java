@@ -9,7 +9,6 @@ import org.eclipse.ui.IStartup;
  */
 public class KilimStartup implements IStartup {
 
-	@Override
 	public void earlyStartup() {
 	}
 

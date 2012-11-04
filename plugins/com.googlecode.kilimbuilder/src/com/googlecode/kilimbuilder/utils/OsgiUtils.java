@@ -48,7 +48,7 @@ public class OsgiUtils
 			 * Returns 1 if bundle2 is dependent on bundle1.
 			 * Returns 0 otherwise;
 			 */
-			@Override public int compare(Bundle b1, Bundle b2) 
+			public int compare(Bundle b1, Bundle b2) 
 			{
 				try 
 				{
