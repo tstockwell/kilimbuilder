@@ -4,3 +4,4 @@ Bundle-Name: Examples
 Bundle-SymbolicName: kilim.examples.project
 Bundle-Version: 1.0.0.qualifier
 Bundle-RequiredExecutionEnvironment: JavaSE-1.6
+Require-Bundle: kilim

@@ -60,7 +60,7 @@ public class Weaver {
                     if (exclude(name))
                         continue;
                     currentName = name;
-                    weaveFile(name, new BufferedInputStream(new FileInputStream(name)), detector);
+                    weaveFile(name, new BufferedInputStream(new FileInputStream(name)), detector, outputDir);
                 } else if (name.endsWith(".jar")) {
                     for (FileLister.Entry fe : new FileLister(name)) {
                         currentName = fe.getFileName();
@@ -69,7 +69,7 @@ public class Weaver {
                                     .replace('/', '.');
                             if (exclude(currentName))
                                 continue;
-                            weaveFile(currentName, fe.getInputStream(), detector);
+                            weaveFile(currentName, fe.getInputStream(), detector, outputDir);
                         }
                     }
                 } else if (new File(name).isDirectory()) {
@@ -78,11 +78,11 @@ public class Weaver {
                         if (currentName.endsWith(".class")) {
                             if (exclude(currentName))
                                 continue;
-                            weaveFile(currentName, fe.getInputStream(), detector);
+                            weaveFile(currentName, fe.getInputStream(), detector, outputDir);
                         }
                     }
                 } else {
-                    weaveClass(name, detector);
+                    weaveClass(name, detector, outputDir);
                 }
             } catch (KilimException ke) {
             	throw new RuntimeException("Error weaving " + currentName, ke);
@@ -98,11 +98,11 @@ public class Weaver {
         return excludePattern == null ? false : excludePattern.matcher(name).find();
     }
 
-    static public void weaveFile(String name, InputStream is, Detector detector) throws IOException {
+    static public void weaveFile(String name, InputStream is, Detector detector, String outputDir) throws IOException {
         try {
             ClassWeaver cw = new ClassWeaver(is, detector);
             cw.weave();
-            writeClasses(cw);
+            writeClasses(cw, outputDir);
         } catch (KilimException ke) {
             err = 1;
             throw new RuntimeException("***** Error weaving " + name, ke);
@@ -115,10 +115,10 @@ public class Weaver {
         }
     }
 
-    static void weaveClass(String name, Detector detector) {
+    static void weaveClass(String name, Detector detector, String outputDir) {
         try {
             ClassWeaver cw = new ClassWeaver(name, detector);
-            writeClasses(cw);
+            writeClasses(cw, outputDir);
         } catch (KilimException ke) {
             err = 1;
             throw new RuntimeException("***** Error weaving " + name, ke);
@@ -130,11 +130,11 @@ public class Weaver {
     }
 
     /** public only for testing purposes */
-    public static void weaveClass2(String name, Detector detector) throws IOException {
+    public static void weaveClass2(String name, Detector detector, String outputDir) throws IOException {
         try {
             ClassWeaver cw = new ClassWeaver(name, detector);
             cw.weave();
-            writeClasses(cw);
+            writeClasses(cw, outputDir);
         } catch (KilimException ke) {
             err = 1;
             System.err.println("***** Error weaving " + name + ". " + ke.getMessage());
@@ -148,16 +148,16 @@ public class Weaver {
         }
     }
 
-    static void writeClasses(ClassWeaver cw) throws IOException {
+    static void writeClasses(ClassWeaver cw, String outputDir) throws IOException {
         List<ClassInfo> cis = cw.getClassInfos();
         if (cis.size() > 0) {
             for (ClassInfo ci : cis) {
-                writeClass(ci);
+                writeClass(ci, outputDir);
             }
         }
     }
 
-    static void writeClass(ClassInfo ci) throws IOException {
+    static void writeClass(ClassInfo ci, String outputDir) throws IOException {
         String className = ci.className.replace('.', File.separatorChar);
         String dir = outputDir + File.separatorChar + getDirName(className);
         mkdir(dir);
@@ -168,11 +168,12 @@ public class Weaver {
             if (new File(className).exists())
                 return;
         }
-        FileOutputStream fos = new FileOutputStream(className);
+        File file= new File(className).getAbsoluteFile();
+        FileOutputStream fos = new FileOutputStream(file);
         fos.write(ci.bytes);
         fos.close();
         if (verbose) {
-            System.out.println("Wrote: " + className);
+            System.out.println("Wrote: " + file);
         }
     }
 

@@ -246,7 +246,7 @@ public class JDTUtils
 		 */
 		primaryType= javaProject.findType(primaryName);
 		
-		if (!primaryType.exists())
+		if (primaryType == null || !primaryType.exists())
 			return null; // we failed to find the containing type
 		
 		if (occurence <= 0) // if not anonymous then we done

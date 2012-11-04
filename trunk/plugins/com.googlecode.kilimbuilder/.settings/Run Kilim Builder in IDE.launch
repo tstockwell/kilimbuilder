@@ -12,7 +12,7 @@
 <booleanAttribute key="clearwslog" value="false"/>
 <stringAttribute key="configLocation" value="${workspace_loc}/.metadata/.plugins/org.eclipse.pde.core/Run Kilim Builder in IDE"/>
 <booleanAttribute key="default" value="false"/>
-<stringAttribute key="deselected_workspace_plugins" value="com.googlecode.contraildb.core,com.googlecode.contraildb.library.appengine,com.googlecode.contraildb.library.jets3t,com.googlecode.contraildb.libray.bcel,com.googlecode.contraildb.provider.s3,com.googlecode.contraildb.tests"/>
+<stringAttribute key="deselected_workspace_plugins" value="com.googlecode.contraildb.core,com.googlecode.contraildb.library.appengine,com.googlecode.contraildb.library.jets3t,com.googlecode.contraildb.libray.bcel,com.googlecode.contraildb.provider.s3,com.googlecode.contraildb.tests,kilim.examples.project"/>
 <stringAttribute key="featureDefaultLocation" value="workspace"/>
 <stringAttribute key="featurePluginResolution" value="workspace"/>
 <booleanAttribute key="includeOptional" value="true"/>
