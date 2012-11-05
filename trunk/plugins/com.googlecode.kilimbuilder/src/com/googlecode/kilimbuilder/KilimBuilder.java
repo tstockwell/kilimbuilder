@@ -4,7 +4,6 @@ import java.io.BufferedInputStream;
 import java.io.InputStream;
 import java.util.HashSet;
 import java.util.Map;
-import java.util.StringTokenizer;
 import java.util.regex.Pattern;
 
 import kilim.KilimException;
@@ -21,13 +20,8 @@ import org.eclipse.core.resources.IResourceDelta;
 import org.eclipse.core.resources.IResourceDeltaVisitor;
 import org.eclipse.core.resources.IResourceVisitor;
 import org.eclipse.core.resources.IncrementalProjectBuilder;
-import org.eclipse.core.resources.WorkspaceJob;
 import org.eclipse.core.runtime.CoreException;
-import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.IProgressMonitor;
-import org.eclipse.core.runtime.IStatus;
-import org.eclipse.core.runtime.Status;
-import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.jdt.core.IClassFile;
 import org.eclipse.jdt.core.IJavaProject;
 import org.eclipse.jdt.core.IMethod;
@@ -36,8 +30,8 @@ import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.jdt.core.ToolFactory;
 import org.eclipse.jdt.core.util.IClassFileReader;
 
-import com.googlecode.kilimbuilder.utils.LogUtils;
 import com.googlecode.kilimbuilder.utils.JDTUtils;
+import com.googlecode.kilimbuilder.utils.LogUtils;
 
 @SuppressWarnings("rawtypes")
 public class KilimBuilder extends IncrementalProjectBuilder {
@@ -45,85 +39,18 @@ public class KilimBuilder extends IncrementalProjectBuilder {
 	
 	private static final Object __projectAccess= new Object();
 
-
-	class KilimWeavingJob extends WorkspaceJob {
-		IFile _classfile;
-		public KilimWeavingJob(IFile classfile) {
-			super("Weaving "+classfile.getName());
-			this._classfile= classfile;
+	class KilimVisitor implements IResourceDeltaVisitor, IResourceVisitor {
+		
+		IProgressMonitor _progressMonitor;
+		IProject _project= getProject();
+		IJavaProject _javaProject= JDTUtils.getJavaProject(_project);
+		ClassLoader _projectClassLoader= JDTUtils.createProjectClassLoader(_javaProject);
+		Detector _detector= new Detector(new RuntimeClassMirrors(_projectClassLoader));
+		
+		public KilimVisitor(IProgressMonitor monitor) {
+			_progressMonitor= monitor;
 		}
-		public IStatus runInWorkspace(IProgressMonitor monitor) {
-			IResource sourceFile= null;
-			String className= null;
-			try {
-				// get class name
-				IClassFile classFile= (IClassFile)JavaCore.create(_classfile);
-				IClassFileReader classFileReader= ToolFactory.createDefaultClassFileReader(classFile, IClassFileReader.CLASSFILE_ATTRIBUTES);
-				className= new String(classFileReader.getClassName()).replace('/', '.');
-				IJavaProject project= classFile.getJavaProject();
-				IContainer outputLocation= _classfile.getParent();
-				{ 
-					for (int i= className.split(Pattern.quote(".")).length; 1 < i--;) {
-						outputLocation= outputLocation.getParent();
-					}
-				}
-				
-				/*
-				 * Because it is not possible, without analyzing source code, to 
-				 * accurately locate and mark errors in anonymous types when the 
-				 * containing type has compilation errors, we to not run the Kilim weaver until 
-				 * the top-level type is free of compile errors.  
-				 */
-				String containingType= JDTUtils.isAnonymousTypeOrHasAnonymousContainingType(className);
-				if (containingType != null) {
-					IType type= JDTUtils.findType(project, containingType);
-					if (type == null || !type.exists()) {
-						return Status.OK_STATUS; // could not find top level type, do nothing
-					}
-					IMarker[] errorMarkers= JDTUtils.findJavaErrorMarkers(project, type);
-					if (0 < errorMarkers.length) {
-						return Status.OK_STATUS; // containing type has errors, skip for now
-					}
-				}
-				
-				// find source file if we can
-				IType type= null;
-				synchronized (__projectAccess) { // dont know why, but this prevents Eclipse from locking up
-					type= JDTUtils.findType(project, className);
-					if (type != null)
-						sourceFile= type.getResource();
-				}
-				
-				if (sourceFile != null)
-					deleteMarkers(sourceFile);
-				
-				
-				// get path to class to weave
-				ClassLoader projectClassLoader= JDTUtils.createProjectClassLoader(project);
-				Detector detector= new Detector(new RuntimeClassMirrors(projectClassLoader));
-				InputStream classContents= new BufferedInputStream(_classfile.getContents());
-				try {
-					Weaver.weaveFile(className, classContents, detector, outputLocation.getRawLocation().toOSString());
-				}
-				finally {
-					try { classContents.close(); } catch (Throwable t) { }
-				}
-				
-				// refresh so that Eclipse sees any new files
-				_classfile.getParent().refreshLocal(IResource.DEPTH_ZERO, null);
-			} 
-			catch (Throwable e) {
-				if (sourceFile != null) {
-					addMarker(className, sourceFile, e);
-				}
-				else
-					LogUtils.logError("Kilim Problem", e);
-			}
-			return Status.OK_STATUS;
-		}
-	}
-
-	class KilimDeltaVisitor implements IResourceDeltaVisitor {
+		
 		/*
 		 * (non-Javadoc)
 		 * 
@@ -147,14 +74,89 @@ public class KilimBuilder extends IncrementalProjectBuilder {
 			//return true to continue visiting children.
 			return true;
 		}
-	}
-
-	class KilimResourceVisitor implements IResourceVisitor {
+		
 		public boolean visit(IResource resource) {
 			weave(resource);
 			//return true to continue visiting children.
 			return true;
 		}
+		
+
+		void weave(IResource resource) {
+			if (_progressMonitor.isCanceled())
+				return;
+			
+			if (!(resource instanceof IFile) ||  !resource.getName().endsWith(".class")) 
+				return; // do nothing, kilim weaving only applies to .class files
+
+			IFile classfile = (IFile) resource;
+			
+			IResource sourceFile= null;
+			String className= null;
+			try {
+				// get class name
+				IClassFile classFile= (IClassFile)JavaCore.create(classfile);
+				IClassFileReader classFileReader= ToolFactory.createDefaultClassFileReader(classFile, IClassFileReader.CLASSFILE_ATTRIBUTES);
+				className= new String(classFileReader.getClassName()).replace('/', '.');
+				_progressMonitor.subTask("Weaving "+className);
+				IContainer outputLocation= classfile.getParent();
+				{ 
+					for (int i= className.split(Pattern.quote(".")).length; 1 < i--;) {
+						outputLocation= outputLocation.getParent();
+					}
+				}
+				
+				/*
+				 * Because it is not possible, without analyzing source code, to 
+				 * accurately locate and mark errors in anonymous types when the 
+				 * containing type has compilation errors, we do not run the Kilim weaver until 
+				 * the top-level type is free of compile errors.  
+				 */
+				String containingType= JDTUtils.isAnonymousTypeOrHasAnonymousContainingType(className);
+				if (containingType != null) {
+					IType type= JDTUtils.findType(_javaProject, containingType);
+					if (type == null || !type.exists()) {
+						return; // could not find top level type, do nothing
+					}
+					IMarker[] errorMarkers= JDTUtils.findJavaErrorMarkers(_javaProject, type);
+					if (0 < errorMarkers.length) {
+						return; // containing type has errors, skip for now
+					}
+				}
+				
+				// find source file if we can
+				IType type= null;
+				synchronized (__projectAccess) { // dont know why, but this prevents Eclipse from locking up
+					type= JDTUtils.findType(_javaProject, className);
+					if (type != null)
+						sourceFile= type.getResource();
+				}
+				
+				if (sourceFile != null)
+					deleteMarkers(sourceFile);
+				
+				// get path to class to weave
+				InputStream classContents= new BufferedInputStream(classfile.getContents());
+				try {
+					Weaver.weaveFile(className, classContents, _detector, outputLocation.getRawLocation().toOSString());
+				}
+				finally {
+					try { classContents.close(); } catch (Throwable t) { }
+				}
+				
+				// refresh so that Eclipse sees any new files
+				//classfile.getParent().refreshLocal(IResource.DEPTH_ZERO, null);
+			} 
+			catch (Throwable e) {
+				if (sourceFile != null) {
+					addMarker(className, sourceFile, e);
+				}
+				else
+					LogUtils.logError("Kilim Problem", e);
+			}
+			return;
+		}
+		
 	}
 
 	public static final String BUILDER_ID = "com.googlecode.kilimbuilder.kilimBuilder";
@@ -180,16 +182,6 @@ public class KilimBuilder extends IncrementalProjectBuilder {
 		}
 		return null;
 	}
-
-	void weave(IResource resource) {
-		if (!(resource instanceof IFile) ||  !resource.getName().endsWith(".class")) 
-			return; // do nothing, kilim weaving only applies to .class files
-
-		IFile file = (IFile) resource;
-		KilimWeavingJob job= new KilimWeavingJob(file);
-		job.setPriority(Job.BUILD);
-		job.schedule();
-	}
 	void clean(IResource resource) {
 		deleteMarkers(resource);
 	}
@@ -197,7 +189,7 @@ public class KilimBuilder extends IncrementalProjectBuilder {
 	private void deleteMarkers(IResource file) {
 		try {
 			for (IMarker marker:file.findMarkers(null, true, IResource.DEPTH_INFINITE)) {
-				if (marker.getAttribute(IMarker.SOURCE_ID).equals(KilimActivator.PLUGIN_ID)) {
+				if (marker != null && marker.getAttribute(IMarker.SOURCE_ID).equals(KilimActivator.PLUGIN_ID)) {
 					marker.delete();
 				}
 			}
@@ -297,7 +289,7 @@ public class KilimBuilder extends IncrementalProjectBuilder {
 
 	protected void fullBuild(final IProgressMonitor monitor) throws CoreException {
 		try {
-			getProject().accept(new KilimResourceVisitor());
+			getProject().accept(new KilimVisitor(monitor));
 		} catch (CoreException e) {
 		}
 	}
@@ -305,6 +297,6 @@ public class KilimBuilder extends IncrementalProjectBuilder {
 
 	protected void incrementalBuild(IResourceDelta delta, IProgressMonitor monitor) throws CoreException {
 		// the visitor does the work.
-		delta.accept(new KilimDeltaVisitor());
+		delta.accept(new KilimVisitor(monitor));
 	}
 }
