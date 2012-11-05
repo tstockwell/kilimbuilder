@@ -7,7 +7,6 @@
       <category name="com.googlecode.kilimbuilder.category"/>
    </feature>
    <archive path="plugins/com.googlecode.kilimbuilder_0.9.0.jar" url="plugins/com.googlecode.kilimbuilder_0.9.0.jar"/>
-   <archive path="plugins/com.googlecode.kilimbuilder.library.asm_2.2.3.jar" url="plugins/com.googlecode.kilimbuilder.library.asm_2.2.3.jar"/>
    <archive path="plugins/kilim_0.9.0.jar" url="plugins/kilim_0.9.0.jar"/>
    <category-def name="com.googlecode.kilimbuilder.category" label="Kilim For Eclipse">
       <description>
