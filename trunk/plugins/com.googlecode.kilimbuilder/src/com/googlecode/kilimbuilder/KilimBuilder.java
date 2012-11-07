@@ -1,6 +1,7 @@
 package com.googlecode.kilimbuilder;
 
 import java.io.BufferedInputStream;
+import java.io.File;
 import java.io.InputStream;
 import java.util.HashSet;
 import java.util.Map;
@@ -99,12 +100,20 @@ public class KilimBuilder extends IncrementalProjectBuilder {
 				IClassFileReader classFileReader= ToolFactory.createDefaultClassFileReader(classFile, IClassFileReader.CLASSFILE_ATTRIBUTES);
 				className= new String(classFileReader.getClassName()).replace('/', '.');
 				_progressMonitor.subTask("Weaving "+className);
-				IContainer outputLocation= classfile.getParent();
+				
+				/**
+				 * Determine output location.
+				 * Create folder for holding instrumented classes.
+				 */
+				IContainer classContainer= classfile.getParent();
 				{ 
 					for (int i= className.split(Pattern.quote(".")).length; 1 < i--;) {
-						outputLocation= outputLocation.getParent();
+						classContainer= classContainer.getParent();
 					}
 				}
+				File classFolder= classContainer.getRawLocation().toFile();
+				File outputFolder= new File(classFolder, "_instrumented");
+				outputFolder.mkdirs();
 				
 				/*
 				 * Because it is not possible, without analyzing source code, to 
@@ -138,7 +147,7 @@ public class KilimBuilder extends IncrementalProjectBuilder {
 				// get path to class to weave
 				InputStream classContents= new BufferedInputStream(classfile.getContents());
 				try {
-					Weaver.weaveFile(className, classContents, _detector, outputLocation.getRawLocation().toOSString());
+					Weaver.weaveFile(className, classContents, _detector, outputFolder.getCanonicalPath());
 				}
 				finally {
 					try { classContents.close(); } catch (Throwable t) { }
@@ -189,7 +198,8 @@ public class KilimBuilder extends IncrementalProjectBuilder {
 	private void deleteMarkers(IResource file) {
 		try {
 			for (IMarker marker:file.findMarkers(null, true, IResource.DEPTH_INFINITE)) {
-				if (marker != null && marker.getAttribute(IMarker.SOURCE_ID).equals(KilimActivator.PLUGIN_ID)) {
+				Object sourceId= marker.getAttribute(IMarker.SOURCE_ID);
+				if (KilimActivator.PLUGIN_ID.equals(sourceId)) {
 					marker.delete();
 				}
 			}
