@@ -30,7 +30,7 @@ import com.googlecode.kilimbuilder.utils.OsgiUtils;
  */
 @SuppressWarnings("deprecation")
 public class KilimClasspathContainer implements IClasspathContainer {
-    public final static Path CONTAINER_PATH = new Path("com.googlecode.kilimbuilder.KILIM_CONTAINER");
+    public final static String CONTAINER_PATH = "com.googlecode.kilimbuilder.KILIM_CONTAINER";
     
     // path string that uniquely identifies this container instance
     private IPath _path;
