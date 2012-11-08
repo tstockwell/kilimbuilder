@@ -112,8 +112,9 @@ public class KilimBuilder extends IncrementalProjectBuilder {
 					}
 				}
 				File classFolder= classContainer.getRawLocation().toFile();
-				File outputFolder= new File(classFolder, "_instrumented");
-				outputFolder.mkdirs();
+				File outputFolder= new File(new File(classFolder.getParent(), "instrumented"), "kilim");
+				if (outputFolder.mkdirs())
+					classContainer.refreshLocal(IResource.DEPTH_INFINITE, null/*no monitor*/);
 				
 				/*
 				 * Because it is not possible, without analyzing source code, to 

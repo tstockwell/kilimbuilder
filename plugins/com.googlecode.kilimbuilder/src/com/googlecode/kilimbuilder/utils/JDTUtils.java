@@ -10,7 +10,9 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 
+import org.eclipse.core.resources.ICommand;
 import org.eclipse.core.resources.IContainer;
+import org.eclipse.core.resources.IFolder;
 import org.eclipse.core.resources.IMarker;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IProjectDescription;
@@ -31,6 +33,7 @@ import org.eclipse.jdt.core.IType;
 import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.jdt.core.JavaModelException;
 
+import com.googlecode.kilimbuilder.KilimBuilder;
 import com.googlecode.kilimbuilder.KilimNature;
 
 
@@ -620,10 +623,10 @@ public class JDTUtils
 			removeNatureFromProject(project, natureId);
 		}
 		else
-			addNatureToproject(project, natureId);
+			addNatureToProject(project, natureId);
 	}
 
-	public static void addNatureToproject(IProject project, String natureId) throws CoreException {
+	public static void addNatureToProject(IProject project, String natureId) throws CoreException {
 		IProjectDescription description = project.getDescription();
 		String[] natures = description.getNatureIds();
 
@@ -657,5 +660,94 @@ public class JDTUtils
 				return;
 			}
 		}
-	}	
+	}
+	
+
+	public static void addClasspathEntryToProject(IJavaProject javaProject, IClasspathEntry classpathEntry) 
+	throws CoreException, JavaModelException 
+	{
+        IClasspathEntry[] rawClasspath = javaProject.getRawClasspath();
+		for (int i = 0; i < rawClasspath.length; ++i) {
+			if (classpathEntry.getPath().equals(rawClasspath[i].getPath())) {
+				return; //already configured;
+			}
+		}
+		
+        IClasspathEntry[] newClasspath = new IClasspathEntry[rawClasspath.length+1];
+		System.arraycopy(rawClasspath, 0, newClasspath, 0, rawClasspath.length);
+        newClasspath[newClasspath.length - 1] = classpathEntry;
+        javaProject.setRawClasspath(newClasspath,null);
+	}
+
+	public static void addBuilderToProject(IProject project, String builderId) throws CoreException {
+		IProjectDescription projectDescription= project.getDescription();
+		ICommand[] commands = projectDescription.getBuildSpec();
+		for (int i = 0; i < commands.length; ++i) {
+			if (commands[i].getBuilderName().equals(KilimBuilder.BUILDER_ID)) {
+				return; // already configured
+			}
+		}
+		
+		ICommand[] newCommands = new ICommand[commands.length + 1];
+		System.arraycopy(commands, 0, newCommands, 0, commands.length);
+		ICommand command = projectDescription.newCommand();
+		command.setBuilderName(builderId);
+		newCommands[newCommands.length - 1] = command;
+		projectDescription.setBuildSpec(newCommands);
+		project.setDescription(projectDescription, null);
+	}
+	
+	public static void removeBuilderFromProject(IProject project, String builderId) throws CoreException {
+		IProjectDescription description = project.getDescription();
+		ICommand[] commands = description.getBuildSpec();
+		for (int i = 0; i < commands.length; ++i) {
+			if (commands[i].getBuilderName().equals(builderId)) {
+				ICommand[] newCommands = new ICommand[commands.length - 1];
+				System.arraycopy(commands, 0, newCommands, 0, i);
+				System.arraycopy(commands, i + 1, newCommands, i,
+						commands.length - i - 1);
+				description.setBuildSpec(newCommands);
+				project.setDescription(description, null);			
+				break;
+			}
+		}
+	}
+	
+	public static void removeClasspathEntryFromProject(IJavaProject javaProject, String classpathEntryPath) 
+	throws CoreException, JavaModelException 
+	{
+        IClasspathEntry[] rawClasspath = javaProject.getRawClasspath();
+		for (int i = 0; i < rawClasspath.length; ++i) {
+			IClasspathEntry entry= rawClasspath[i];
+			IPath path= entry.getPath();
+			if (classpathEntryPath.equals(path.toString())) {
+		        IClasspathEntry[] newClasspath = new IClasspathEntry[rawClasspath.length-1];
+				System.arraycopy(rawClasspath, 0, newClasspath, 0, i);
+				System.arraycopy(rawClasspath, i + 1, newClasspath, i, rawClasspath.length - i - 1);
+				javaProject.setRawClasspath(newClasspath, null);			
+				break;
+			}
+		}
+	}
+
+	public static List<IClasspathEntry> getSourcePaths(IJavaProject javaProject) throws JavaModelException {
+        IClasspathEntry[] rawClasspath = javaProject.getRawClasspath();
+        ArrayList<IClasspathEntry> paths= new ArrayList<IClasspathEntry>();
+		for (int i = 0; i < rawClasspath.length; ++i) {
+			IClasspathEntry classpathEntry= rawClasspath[i];
+			if (classpathEntry.getEntryKind() == IClasspathEntry.CPE_SOURCE) {
+				paths.add(classpathEntry);
+			}
+		}
+		return paths;
+	}
+
+	public static void createFolder(IProject javaProject, IFolder outputLocation) throws CoreException {
+		if (outputLocation.exists())
+			return;
+		IContainer container= outputLocation.getParent();
+		if (container != null && !container.exists())
+			createFolder(javaProject, javaProject.getFolder(container.getProjectRelativePath()));
+		outputLocation.create(false, true, null);
+	}
 }
