@@ -4,6 +4,7 @@ import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.InputStream;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
 
@@ -14,20 +15,26 @@ import kilim.tools.Weaver;
 
 import org.eclipse.core.resources.IContainer;
 import org.eclipse.core.resources.IFile;
+import org.eclipse.core.resources.IFolder;
 import org.eclipse.core.resources.IMarker;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.IResourceDelta;
 import org.eclipse.core.resources.IResourceDeltaVisitor;
 import org.eclipse.core.resources.IResourceVisitor;
+import org.eclipse.core.resources.IWorkspaceRoot;
 import org.eclipse.core.resources.IncrementalProjectBuilder;
 import org.eclipse.core.runtime.CoreException;
+import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.Path;
 import org.eclipse.jdt.core.IClassFile;
+import org.eclipse.jdt.core.IClasspathEntry;
 import org.eclipse.jdt.core.IJavaProject;
 import org.eclipse.jdt.core.IMethod;
 import org.eclipse.jdt.core.IType;
 import org.eclipse.jdt.core.JavaCore;
+import org.eclipse.jdt.core.JavaModelException;
 import org.eclipse.jdt.core.ToolFactory;
 import org.eclipse.jdt.core.util.IClassFileReader;
 
@@ -40,7 +47,7 @@ public class KilimBuilder extends IncrementalProjectBuilder {
 	
 	private static final Object __projectAccess= new Object();
 
-	class KilimVisitor implements IResourceDeltaVisitor, IResourceVisitor {
+	class WeavingVisitor implements IResourceDeltaVisitor, IResourceVisitor {
 		
 		IProgressMonitor _progressMonitor;
 		IProject _project= getProject();
@@ -48,7 +55,7 @@ public class KilimBuilder extends IncrementalProjectBuilder {
 		ClassLoader _projectClassLoader= JDTUtils.createProjectClassLoader(_javaProject);
 		Detector _detector= new Detector(new RuntimeClassMirrors(_projectClassLoader));
 		
-		public KilimVisitor(IProgressMonitor monitor) {
+		public WeavingVisitor(IProgressMonitor monitor) {
 			_progressMonitor= monitor;
 		}
 		
@@ -111,8 +118,12 @@ public class KilimBuilder extends IncrementalProjectBuilder {
 						classContainer= classContainer.getParent();
 					}
 				}
-				File classFolder= classContainer.getRawLocation().toFile();
-				File outputFolder= new File(new File(classFolder.getParent(), "instrumented"), "kilim");
+				IPath rawClassLocation= classContainer.getRawLocation();
+				// ignore woven classes
+				if (rawClassLocation.lastSegment().equals("kilim"))
+					return;
+				IPath outputPath= rawClassLocation.removeLastSegments(1).append("/instrumented").append("/kilim");
+				File outputFolder= outputPath.toFile();
 				if (outputFolder.mkdirs())
 					classContainer.refreshLocal(IResource.DEPTH_INFINITE, null/*no monitor*/);
 				
@@ -126,10 +137,12 @@ public class KilimBuilder extends IncrementalProjectBuilder {
 				if (containingType != null) {
 					IType type= JDTUtils.findType(_javaProject, containingType);
 					if (type == null || !type.exists()) {
+//						copyToOutputFolder(outputFolder, className, classFile);
 						return; // could not find top level type, do nothing
 					}
 					IMarker[] errorMarkers= JDTUtils.findJavaErrorMarkers(_javaProject, type);
 					if (0 < errorMarkers.length) {
+//						copyToOutputFolder(outputFolder, className, classFile);
 						return; // containing type has errors, skip for now
 					}
 				}
@@ -165,6 +178,88 @@ public class KilimBuilder extends IncrementalProjectBuilder {
 					LogUtils.logError("Kilim Problem", e);
 			}
 			return;
+		}
+		
+	}
+	
+	class CopyingVisitor implements IResourceDeltaVisitor, IResourceVisitor {
+		
+		IProgressMonitor _progressMonitor;
+		IProject _project= getProject();
+		IJavaProject _javaProject= JDTUtils.getJavaProject(_project);
+		List<IClasspathEntry> _sourcePaths;
+		IWorkspaceRoot _workspaceRoot= _project.getWorkspace().getRoot();
+		
+		public CopyingVisitor(IProgressMonitor monitor) throws JavaModelException {
+			_progressMonitor= monitor;
+			_sourcePaths= JDTUtils.getSourcePaths(_javaProject);
+		}
+		
+		/*
+		 * (non-Javadoc)
+		 * 
+		 * @see org.eclipse.core.resources.IResourceDeltaVisitor#visit(org.eclipse.core.resources.IResourceDelta)
+		 */
+		public boolean visit(IResourceDelta delta) throws CoreException {
+			IResource resource = delta.getResource();
+			switch (delta.getKind()) {
+			case IResourceDelta.ADDED:
+				// handle added resource
+				copy(resource);
+				break;
+			case IResourceDelta.REMOVED:
+				// handle removed resource
+				break;
+			case IResourceDelta.CHANGED:
+				// handle changed resource
+				copy(resource);
+				break;
+			}
+			//return true to continue visiting children.
+			return true;
+		}
+		
+		public boolean visit(IResource resource) {
+			copy(resource);
+			//return true to continue visiting children.
+			return true;
+		}
+		
+
+		void copy(IResource resource)  {
+			try {
+				if (_progressMonitor.isCanceled())
+					return;
+				
+				if (!(resource instanceof IFile) ||  !resource.getName().endsWith(".class")) 
+					return; // do nothing, kilim weaving only applies to .class files
+
+				IPath resourceFolder= resource.getParent().getLocation();
+				IPath resourceFile= resource.getLocation();
+				for (IClasspathEntry classpathEntry:_sourcePaths) {
+					IPath outputLocation= classpathEntry.getOutputLocation();
+					if (outputLocation == null)
+						outputLocation= _javaProject.getOutputLocation();
+					outputLocation= _workspaceRoot.getFolder(outputLocation).getLocation();
+					if (outputLocation.isPrefixOf(resourceFolder)) {
+						IPath copyFolderPath= outputLocation.removeLastSegments(1).append("/instrumented").append("/kilim");
+						IFolder copyFolder= _project.getFolder(copyFolderPath);
+						if (!copyFolder.exists()) 
+							JDTUtils.createFolder(_project, copyFolder);
+						
+						IPath relativeResourcePath= resourceFile.removeFirstSegments(outputLocation.segmentCount());
+						IPath destinationPath= copyFolderPath.append(relativeResourcePath);
+						IFolder destinationFolder= _workspaceRoot.getFolder(destinationPath.removeLastSegments(1));
+						if (!destinationFolder.exists())
+							JDTUtils.createFolder(_project, destinationFolder);
+						destinationPath= destinationPath.makeRelative();
+						resource.copy(destinationPath, true, null);
+						break;
+					}
+				}
+			} catch (CoreException e) {
+				LogUtils.logError("failed to copy .class file", e);
+			}
 		}
 		
 	}
@@ -300,14 +395,16 @@ public class KilimBuilder extends IncrementalProjectBuilder {
 
 	protected void fullBuild(final IProgressMonitor monitor) throws CoreException {
 		try {
-			getProject().accept(new KilimVisitor(monitor));
+			IProject project= getProject();
+			project.accept(new CopyingVisitor(monitor)); // copy all the .class files before weaving
+			project.accept(new WeavingVisitor(monitor));
 		} catch (CoreException e) {
 		}
 	}
 
 
 	protected void incrementalBuild(IResourceDelta delta, IProgressMonitor monitor) throws CoreException {
-		// the visitor does the work.
-		delta.accept(new KilimVisitor(monitor));
+		delta.accept(new CopyingVisitor(monitor)); // copy all the .class files before weaving
+		delta.accept(new WeavingVisitor(monitor));
 	}
 }
