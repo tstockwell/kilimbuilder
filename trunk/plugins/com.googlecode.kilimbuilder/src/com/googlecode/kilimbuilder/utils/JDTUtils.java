@@ -742,12 +742,19 @@ public class JDTUtils
 		return paths;
 	}
 
-	public static void createFolder(IProject javaProject, IFolder outputLocation) throws CoreException {
+	public static void createFolder(IProject project, IFolder outputLocation) throws CoreException {
 		if (outputLocation.exists())
 			return;
 		IContainer container= outputLocation.getParent();
 		if (container != null && !container.exists())
-			createFolder(javaProject, javaProject.getFolder(container.getProjectRelativePath()));
+			createFolder(project, project.getFolder(container.getProjectRelativePath()));
 		outputLocation.create(false, true, null);
+	}
+
+	public static String getLastSegment(IPath projectRelativePath) {
+		String[] segments= projectRelativePath.segments();
+		if (segments == null || segments.length <= 0)
+			return "";
+		return segments[segments.length-1];
 	}
 }
