@@ -30,6 +30,7 @@ import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.Path;
 import org.eclipse.jdt.core.IClassFile;
 import org.eclipse.jdt.core.IClasspathEntry;
+import org.eclipse.jdt.core.ICompilationUnit;
 import org.eclipse.jdt.core.IJavaProject;
 import org.eclipse.jdt.core.IMethod;
 import org.eclipse.jdt.core.IType;
@@ -243,9 +244,6 @@ public class KilimBuilder extends IncrementalProjectBuilder {
 					outputLocation= _workspaceRoot.getFolder(outputLocation).getLocation();
 					if (outputLocation.isPrefixOf(resourceFolder)) {
 						IPath copyFolderPath= outputLocation.removeLastSegments(1).append("/instrumented").append("/kilim");
-						IFolder copyFolder= _project.getFolder(copyFolderPath);
-						if (!copyFolder.exists()) 
-							JDTUtils.create(copyFolder, null);
 						
 						IPath relativeResourcePath= resourceFile.makeRelativeTo(outputLocation);
 						IPath destinationPath= copyFolderPath.append(relativeResourcePath);
@@ -345,7 +343,9 @@ public class KilimBuilder extends IncrementalProjectBuilder {
 						IType type= JDTUtils.findType(project, className);
 						if (type != null) {
 							IMethod method= JDTUtils.findMethod(type, methodSig);
-							line= JDTUtils.getLineNumber(type.getCompilationUnit(), method.getSourceRange().getOffset());
+							ICompilationUnit compilationUnit= type.getCompilationUnit();
+							if (compilationUnit != null)
+								line= JDTUtils.getLineNumber(compilationUnit, method.getSourceRange().getOffset());
 						}
 					}
 					else if (msg.contains("from within a synchronized block")) {
