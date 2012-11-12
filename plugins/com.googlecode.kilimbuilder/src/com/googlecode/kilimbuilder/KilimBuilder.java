@@ -245,15 +245,21 @@ public class KilimBuilder extends IncrementalProjectBuilder {
 						IPath copyFolderPath= outputLocation.removeLastSegments(1).append("/instrumented").append("/kilim");
 						IFolder copyFolder= _project.getFolder(copyFolderPath);
 						if (!copyFolder.exists()) 
-							JDTUtils.createFolder(_project, copyFolder);
+							JDTUtils.create(copyFolder, null);
 						
-						IPath relativeResourcePath= resourceFile.removeFirstSegments(outputLocation.segmentCount());
+						IPath relativeResourcePath= resourceFile.makeRelativeTo(outputLocation);
 						IPath destinationPath= copyFolderPath.append(relativeResourcePath);
-						IFolder destinationFolder= _workspaceRoot.getFolder(destinationPath.removeLastSegments(1));
+						
+						IFile destinationFile= _workspaceRoot.getFileForLocation(destinationPath);
+						if (destinationFile.exists())
+							destinationFile.delete(true, null);
+						
+						IContainer destinationFolder= destinationFile.getParent();
 						if (!destinationFolder.exists())
-							JDTUtils.createFolder(_project, destinationFolder);
-						destinationPath= destinationPath.makeRelative();
-						resource.copy(destinationPath, true, null);
+							JDTUtils.create(destinationFolder, null);
+						
+						IPath relativeDestination= destinationPath.makeRelativeTo(resourceFolder);
+						resource.copy(relativeDestination, true, null);
 						break;
 					}
 				}
@@ -398,13 +404,16 @@ public class KilimBuilder extends IncrementalProjectBuilder {
 			IProject project= getProject();
 			project.accept(new CopyingVisitor(monitor)); // copy all the .class files before weaving
 			project.accept(new WeavingVisitor(monitor));
+			//project.refreshLocal(IResource.DEPTH_INFINITE, monitor);
 		} catch (CoreException e) {
 		}
 	}
 
 
 	protected void incrementalBuild(IResourceDelta delta, IProgressMonitor monitor) throws CoreException {
+		//IProject project= getProject();
 		delta.accept(new CopyingVisitor(monitor)); // copy all the .class files before weaving
 		delta.accept(new WeavingVisitor(monitor));
+		//project.refreshLocal(IResource.DEPTH_INFINITE, monitor);
 	}
 }

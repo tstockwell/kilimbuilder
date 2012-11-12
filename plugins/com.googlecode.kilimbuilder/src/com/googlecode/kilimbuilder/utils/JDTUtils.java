@@ -1,5 +1,6 @@
 package com.googlecode.kilimbuilder.utils;
 
+import java.io.ByteArrayInputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -12,6 +13,7 @@ import java.util.Set;
 
 import org.eclipse.core.resources.ICommand;
 import org.eclipse.core.resources.IContainer;
+import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IFolder;
 import org.eclipse.core.resources.IMarker;
 import org.eclipse.core.resources.IProject;
@@ -21,6 +23,7 @@ import org.eclipse.core.resources.IWorkspaceRoot;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
+import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.jdt.core.IClasspathEntry;
 import org.eclipse.jdt.core.ICompilationUnit;
 import org.eclipse.jdt.core.IJavaElement;
@@ -742,14 +745,14 @@ public class JDTUtils
 		return paths;
 	}
 
-	public static void createFolder(IProject project, IFolder outputLocation) throws CoreException {
-		if (outputLocation.exists())
-			return;
-		IContainer container= outputLocation.getParent();
-		if (container != null && !container.exists())
-			createFolder(project, project.getFolder(container.getProjectRelativePath()));
-		outputLocation.create(false, true, null);
-	}
+//	public static void createFolder(IProject project, IFolder outputLocation) throws CoreException {
+//		if (outputLocation.exists())
+//			return;
+//		IContainer container= outputLocation.getParent();
+//		if (container != null && !container.exists())
+//			createFolder(project, project.getFolder(container.getProjectRelativePath()));
+//		outputLocation.create(true, true, null);
+//	}
 
 	public static String getLastSegment(IPath projectRelativePath) {
 		String[] segments= projectRelativePath.segments();
@@ -757,4 +760,24 @@ public class JDTUtils
 			return "";
 		return segments[segments.length-1];
 	}
+	
+
+	public static void create(final IResource resource, IProgressMonitor monitor) throws CoreException {
+		if (resource == null || resource.exists())
+			return;
+		if (!resource.getParent().exists())
+			create(resource.getParent(), monitor);
+		switch (resource.getType()) {
+		case IResource.FILE :
+			((IFile) resource).create(new ByteArrayInputStream(new byte[0]), true, monitor);
+			break;
+		case IResource.FOLDER :
+			((IFolder) resource).create(IResource.NONE, true, monitor);
+			break;
+		case IResource.PROJECT :
+			((IProject) resource).create(monitor);
+			((IProject) resource).open(monitor);
+			break;
+		}
+	}	
 }

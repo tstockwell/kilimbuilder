@@ -119,7 +119,7 @@ public class KilimNature implements IProjectNature {
 	                	IPath path= file.getProjectRelativePath();
 	                	IFolder outputLocation= project.getFolder(path);
 	            		if (!outputLocation.exists())
-	            			JDTUtils.createFolder(project, outputLocation);
+	            			JDTUtils.create(outputLocation, null);
             		}
     	        }
     		}
