@@ -111,7 +111,12 @@ public class KilimNature implements IProjectNature {
     	        			JavaCore.newClasspathAttribute(KILIM_CLASSPATH_ATTRIBUTE, "true")
     	        	};
     	        	IClasspathEntry instrmentedOutputEntry = JavaCore.newLibraryEntry(instrumentedPath, null, null, null, attributes, false);
-            		newClasspath.add(i++, instrmentedOutputEntry); // add kilim entry immediately before output location
+    	        	
+            		// Add kilim entry immediately after src entry.
+    	        	// NOTE: Adding this entry BEFORE the src entry may seem 
+    	        	// like a better idea but adding it before the scr entry 
+    	        	// will screw up source lookup in the Eclipse IDE.
+            		newClasspath.add(++i, instrmentedOutputEntry); 
             		
             		// create the folder if it doesnt exist
             		{
