@@ -152,7 +152,7 @@ public class KilimBuilder extends IncrementalProjectBuilder {
 				IType type= null;
 				synchronized (__projectAccess) { // dont know why, but this prevents Eclipse from locking up
 					type= JDTUtils.findType(_javaProject, className);
-					if (type != null)
+					if (type != null && !type.isBinary())
 						sourceFile= type.getResource();
 				}
 				
