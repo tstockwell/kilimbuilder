@@ -2,7 +2,7 @@
 <feature
       id="com.googlecode.kilimbuilder"
       label="Kilim For Eclipse"
-      version="0.9.0"
+      version="0.9.1"
       provider-name="Ted Stockwell">
 
    <description url="https://code.google.com/p/kilimbuilder/">
@@ -25,13 +25,13 @@ See http://www.malhar.net/sriram/kilim/ for more information about Kilim.
          id="kilim"
          download-size="0"
          install-size="0"
-         version="0.9.0"/>
+         version="0.9.1"/>
 
    <plugin
          id="com.googlecode.kilimbuilder"
          download-size="0"
          install-size="0"
-         version="0.9.0"
+         version="0.9.1"
          unpack="false"/>
 
 </feature>
