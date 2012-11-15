@@ -376,18 +376,26 @@ public class JDTUtils
 	}
 	
 
-	public static IMarker[] findJavaErrorMarkers(IJavaProject javaProject, IType type) throws CoreException {
-		IProject project= javaProject.getProject();
+	public static IMarker[] findJavaErrorMarkers(IProject project, IResource resource) throws CoreException {
 		ArrayList<IMarker> list= new ArrayList<IMarker>();
 		IMarker [] markers = project.findMarkers(IJavaModelMarker.JAVA_MODEL_PROBLEM_MARKER, false, IResource.DEPTH_INFINITE);
 		for (int a = 0; a < markers.length; a++)
 		{
 			IMarker marker = markers[a];
-			Object severity = marker.getAttribute(IMarker.SEVERITY);
-			if (((Integer) severity).intValue() == IMarker.SEVERITY_ERROR)
-			{
-				list.add(marker);
+			
+			IResource marked= marker.getResource();
+			if (marked == null) {
+				if (resource != null)
+					continue;
 			}
+			else if (!marked.equals(resource)) 
+				continue;
+			
+			Object severity = marker.getAttribute(IMarker.SEVERITY);
+			if (((Integer) severity).intValue() != IMarker.SEVERITY_ERROR)
+				continue;
+			
+			list.add(marker);
 		}
 		return list.toArray(new IMarker[list.size()]);
 	}
