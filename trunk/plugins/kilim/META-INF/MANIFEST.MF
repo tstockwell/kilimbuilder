@@ -13,7 +13,6 @@ Export-Package: kilim,
  kilim.nio,
  kilim.tools
 Bundle-ClassPath: instrumented/kilim/,
- bin/,
  libs/asm-all-2.2.3.jar
 Eclipse-BuddyPolicy: global
 Bundle-ActivationPolicy: lazy

@@ -15,7 +15,6 @@ import kilim.tools.Weaver;
 
 import org.eclipse.core.resources.IContainer;
 import org.eclipse.core.resources.IFile;
-import org.eclipse.core.resources.IFolder;
 import org.eclipse.core.resources.IMarker;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IResource;
@@ -27,7 +26,6 @@ import org.eclipse.core.resources.IncrementalProjectBuilder;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.IProgressMonitor;
-import org.eclipse.core.runtime.Path;
 import org.eclipse.jdt.core.IClassFile;
 import org.eclipse.jdt.core.IClasspathEntry;
 import org.eclipse.jdt.core.ICompilationUnit;
@@ -44,6 +42,8 @@ import com.googlecode.kilimbuilder.utils.LogUtils;
 
 @SuppressWarnings("rawtypes")
 public class KilimBuilder extends IncrementalProjectBuilder {
+	
+	public static final String CLASSNAME_ATTRIBUTE= KilimActivator.PLUGIN_ID+".classname";
 	
 	
 	private static final Object __projectAccess= new Object();
@@ -74,6 +74,7 @@ public class KilimBuilder extends IncrementalProjectBuilder {
 				break;
 			case IResourceDelta.REMOVED:
 				// handle removed resource
+				clean(resource);
 				break;
 			case IResourceDelta.CHANGED:
 				// handle changed resource
@@ -141,7 +142,7 @@ public class KilimBuilder extends IncrementalProjectBuilder {
 //						copyToOutputFolder(outputFolder, className, classFile);
 						return; // could not find top level type, do nothing
 					}
-					IMarker[] errorMarkers= JDTUtils.findJavaErrorMarkers(_javaProject, type);
+					IMarker[] errorMarkers= JDTUtils.findJavaErrorMarkers(_project, type.getResource());
 					if (0 < errorMarkers.length) {
 //						copyToOutputFolder(outputFolder, className, classFile);
 						return; // containing type has errors, skip for now
@@ -157,7 +158,7 @@ public class KilimBuilder extends IncrementalProjectBuilder {
 				}
 				
 				if (sourceFile != null)
-					deleteMarkers(sourceFile);
+					deleteMarkers(className, sourceFile);
 				
 				// get path to class to weave
 				InputStream classContents= new BufferedInputStream(classfile.getContents());
@@ -292,15 +293,62 @@ public class KilimBuilder extends IncrementalProjectBuilder {
 		return null;
 	}
 	void clean(IResource resource) {
-		deleteMarkers(resource);
+		
+		String className= null;
+		if (resource instanceof IFile &&  resource.getName().endsWith(".class")) {
+			IFile classfile = (IFile) resource;
+			try {
+				// get class name
+				IClassFile classFile= (IClassFile)JavaCore.create(classfile);
+				IClassFileReader classFileReader= ToolFactory.createDefaultClassFileReader(classFile, IClassFileReader.CLASSFILE_ATTRIBUTES);
+				className= new String(classFileReader.getClassName()).replace('/', '.');
+				
+				// Delete any associated instrumented class if we can find one
+				IContainer classContainer= classfile.getParent();
+				{ 
+					for (int i= className.split(Pattern.quote(".")).length; 1 < i--;) {
+						classContainer= classContainer.getParent();
+					}
+				}
+				IPath outputLocation= classContainer.getRawLocation();
+				IPath resourceFile= resource.getLocation();
+				// ignore woven classes
+				if (!outputLocation.lastSegment().equals("kilim")) {
+					
+					IPath copyFolderPath= outputLocation.removeLastSegments(1).append("/instrumented").append("/kilim");
+					
+					IPath relativeResourcePath= resourceFile.makeRelativeTo(outputLocation);
+					IPath destinationPath= copyFolderPath.append(relativeResourcePath);
+					
+					IFile destinationFile= resource.getWorkspace().getRoot().getFileForLocation(destinationPath);
+					if (destinationFile.exists())
+						destinationFile.delete(true, null);
+				}
+			}
+			catch (Throwable t) { 
+			}
+		}
+
+		deleteMarkers(className, resource);
 	}
 
-	private void deleteMarkers(IResource file) {
+	private void deleteMarkers(String classname, IResource file) {
 		try {
 			for (IMarker marker:file.findMarkers(null, true, IResource.DEPTH_INFINITE)) {
 				Object sourceId= marker.getAttribute(IMarker.SOURCE_ID);
 				if (KilimActivator.PLUGIN_ID.equals(sourceId)) {
-					marker.delete();
+					if (classname == null) {
+						marker.delete();
+					}
+					else {
+						Object markedClass= marker.getAttribute(CLASSNAME_ATTRIBUTE);
+						if (markedClass == null) {
+							marker.delete();
+						}
+						else if (classname.equals(markedClass)) {
+							marker.delete();
+						}
+					}
 				}
 			}
 		} catch (CoreException ce) {
@@ -378,6 +426,8 @@ public class KilimBuilder extends IncrementalProjectBuilder {
 			marker.setAttribute(IMarker.TEXT, txt);
 			if (0 <= line)
 				marker.setAttribute(IMarker.LINE_NUMBER, line);
+			if (className != null)
+				marker.setAttribute(CLASSNAME_ATTRIBUTE, className);
 		}
 		catch (CoreException x) { 
 			LogUtils.logError("Error while adding Kilim problem marker for "+className, x);
