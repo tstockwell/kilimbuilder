@@ -15,6 +15,7 @@ import kilim.tools.Weaver;
 
 import org.eclipse.core.resources.IContainer;
 import org.eclipse.core.resources.IFile;
+import org.eclipse.core.resources.IFolder;
 import org.eclipse.core.resources.IMarker;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IResource;
@@ -365,24 +366,31 @@ public class KilimBuilder extends IncrementalProjectBuilder {
 			HashSet<Throwable> seen= new HashSet<Throwable>();
 			seen.add(e);
 			Throwable c= e.getCause();
+			String methodSig= null;
 			while (c != null && !seen.contains(c)) {
 				if (c instanceof KilimException) {
 					msg= c.getMessage();
 					if (msg.contains("Base class method is pausable, derived class is not")) {
 						String methodMarker= "Method = ";
-						String methodSig= msg.substring(msg.indexOf(methodMarker)+methodMarker.length());
-						methodSig.trim();
+						methodSig= msg.substring(msg.indexOf(methodMarker)+methodMarker.length());
+						if (0 < methodSig.indexOf("---"))
+							methodSig= methodSig.substring(0, methodSig.indexOf("---"));
+						methodSig= methodSig.trim();
 						msg= "Method throws Pausable in the base class but not in subclass";
 						
 						IType type= JDTUtils.findType(project, className);
 						if (type != null) {
 							IMethod method= JDTUtils.findMethod(type, methodSig);
-							line= JDTUtils.getLineNumber(type.getCompilationUnit(), method.getSourceRange().getOffset());
+							if (method != null) {
+								ICompilationUnit compilationUnit= type.getCompilationUnit();
+								if (compilationUnit != null)
+									line= JDTUtils.getLineNumber(compilationUnit, method.getSourceRange().getOffset());
+							}
 						}
 					}
 					else if (msg.contains("should be marked pausable. It calls pausable methods")) {
-						String methodSig= msg.substring(0, msg.indexOf("should be marked pausable. It calls pausable methods"));
-						methodSig.trim();
+						methodSig= msg.substring(0, msg.indexOf("should be marked pausable. It calls pausable methods"));
+						methodSig= methodSig.trim();
 						methodSig= methodSig.replaceAll("/", ".");
 						String methodName= methodSig.substring(0, methodSig.indexOf('(')); 
 						methodName= methodName.substring(methodName.lastIndexOf('.')+1); 
@@ -391,16 +399,18 @@ public class KilimBuilder extends IncrementalProjectBuilder {
 						IType type= JDTUtils.findType(project, className);
 						if (type != null) {
 							IMethod method= JDTUtils.findMethod(type, methodSig);
-							ICompilationUnit compilationUnit= type.getCompilationUnit();
-							if (compilationUnit != null)
-								line= JDTUtils.getLineNumber(compilationUnit, method.getSourceRange().getOffset());
+							if (method != null) {
+								ICompilationUnit compilationUnit= type.getCompilationUnit();
+								if (compilationUnit != null)
+									line= JDTUtils.getLineNumber(compilationUnit, method.getSourceRange().getOffset());
+							}
 						}
 					}
 					else if (msg.contains("from within a synchronized block")) {
 						String methodMarker= "Caller: ";
-						String methodSig= msg.substring(msg.indexOf(methodMarker)+methodMarker.length());
+						methodSig= msg.substring(msg.indexOf(methodMarker)+methodMarker.length());
 						methodSig= methodSig.substring(0, methodSig.indexOf("Callee:"));
-						methodSig.trim();
+						methodSig= methodSig.trim();
 						if (methodSig.endsWith(";"))
 							methodSig= methodSig.substring(0, methodSig.length()-1);
 						String methodName= methodSig.substring(0, methodSig.indexOf('(')); 
@@ -410,13 +420,23 @@ public class KilimBuilder extends IncrementalProjectBuilder {
 						IType type= JDTUtils.findType(project, className);
 						if (type != null) {
 							IMethod method= JDTUtils.findMethod(type, methodSig);
-							line= JDTUtils.getLineNumber(type.getCompilationUnit(), method.getSourceRange().getOffset());
+							if (method != null) {
+								ICompilationUnit compilationUnit= type.getCompilationUnit();
+								if (compilationUnit != null)
+									line= JDTUtils.getLineNumber(compilationUnit, method.getSourceRange().getOffset());
+							}
 						}
 					}
 					break;
 				}
 				seen.add(c);
 			}
+			
+			// if we could not figure out what line is associated with the error 
+			// then append the method signature to the marker text so the user 
+			// has some clue to where the error occurred.
+			if (line < 0 && methodSig != null)
+				msg+= " : "+methodSig;
 
 			IMarker marker = sourceFile.createMarker(KILIM_MARKER_TYPE);
 			marker.setAttribute(IMarker.MESSAGE, msg);
@@ -437,13 +457,37 @@ public class KilimBuilder extends IncrementalProjectBuilder {
 	@Override
 	protected void clean(IProgressMonitor monitor) throws CoreException {
 		try {
-			getProject().accept(new IResourceVisitor() {
-				public boolean visit(IResource resource) throws CoreException {
-					clean(resource);
-					//return true to continue visiting children.
-					return true;
+			IProject project= getProject();
+			IJavaProject javaProject= JDTUtils.getJavaProject(project);
+			List<IClasspathEntry> sourcePaths= JDTUtils.getSourcePaths(javaProject);
+			IWorkspaceRoot workspaceRoot= project.getWorkspace().getRoot();
+			
+			// delete all folders with instrumented class files.
+			for (IClasspathEntry classpathEntry:sourcePaths) {
+				IPath outputLocation= classpathEntry.getOutputLocation();
+				if (outputLocation == null)
+					outputLocation= javaProject.getOutputLocation();
+				//outputLocation= workspaceRoot.getFolder(outputLocation).getLocation();
+				IPath instrumentLocation= outputLocation.removeLastSegments(1).append("/instrumented").append("/kilim");
+				IFolder instrumentFolder= workspaceRoot.getFolder(instrumentLocation);
+				if (instrumentFolder.exists()) {
+					
+					instrumentFolder.delete(true, null);
+					
+					// recreate the folder
+					instrumentFolder= workspaceRoot.getFolder(instrumentLocation);
+					instrumentFolder.create(true, true, null);
 				}
-			});
+			}
+			
+			
+//			getProject().accept(new IResourceVisitor() {
+//				public boolean visit(IResource resource) throws CoreException {
+//					clean(resource);
+//					//return true to continue visiting children.
+//					return true;
+//				}
+//			});
 		} catch (CoreException e) {
 		}
 	}

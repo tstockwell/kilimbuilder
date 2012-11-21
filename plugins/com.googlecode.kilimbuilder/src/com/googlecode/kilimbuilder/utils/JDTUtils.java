@@ -250,7 +250,7 @@ public class JDTUtils
 		 * IJavaProject.findType works for top level classes and named inner
 		 * classes, but not for anonymous inner classes.  
 		 */
-		primaryType= javaProject.findType(primaryName);
+		primaryType= javaProject.findType(primaryName, (IProgressMonitor)null);
 		
 		if (primaryType == null || !primaryType.exists())
 			return null; // we failed to find the containing type
@@ -262,8 +262,14 @@ public class JDTUtils
 		 * If we're looking for an anonymous inner class then we need to look 
 		 * through the primary type for it. 
 		 */
+		return findType(primaryType, className);
+	}
+	/**
+	 * Find the type in the given java element
+	 */
+	public static IType findType(IJavaElement javaElement, String className) throws JavaModelException {
 		LinkedList<IJavaElement> todo= new LinkedList<IJavaElement>();
-		todo.add(primaryType);
+		todo.add(javaElement);
 		IType innerType= null;
 		while (!todo.isEmpty()) {
 			IJavaElement element= todo.removeFirst();
