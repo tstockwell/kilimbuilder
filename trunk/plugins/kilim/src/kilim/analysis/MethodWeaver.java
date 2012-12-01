@@ -290,7 +290,16 @@ public class MethodWeaver {
             callWeavers.add(cw);
         }
     }
-
+    
+    private boolean hasGetCurrentTask() {
+    	MethodFlow mf = methodFlow;
+    	for (BasicBlock bb : mf.getBasicBlocks()) {
+    		if (!bb.isPausable() || bb.startFrame==null) continue;
+    		if (bb.isGetCurrentTask()) return true;
+    	}
+    	return false;
+    }
+    
     /**
      * 
      * Say there are two invocations to two pausable methods obj.f(int)
@@ -311,7 +320,12 @@ public class MethodWeaver {
      */
     private void genPrelude(MethodVisitor mv) {
         assert isPausable : "MethodWeaver.genPrelude called for nonPausable method";
-        MethodFlow mf = methodFlow;
+    	
+    	if (callWeavers.size() == 0 && (!hasGetCurrentTask())) {
+    		return; // No pausable methods, no getCurrentTask.  Prelude is not needed at all. 
+        }        
+    	
+    	MethodFlow mf = methodFlow;
         // load fiber from last var
         int lastVar = getFiberArgVar();
 
