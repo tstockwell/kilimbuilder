@@ -905,7 +905,7 @@ public class BasicBlock implements Comparable<BasicBlock> {
                             frame.pop();
                         }
                         if (frame.stacklen != 0) {
-                            throw new InternalError("stack non null at method return");
+                            throw new InternalError("stack non null at method return.\n"+this);
                         }
                         break;
                         
