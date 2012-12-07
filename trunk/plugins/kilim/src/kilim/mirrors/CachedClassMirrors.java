@@ -63,19 +63,65 @@ public class CachedClassMirrors extends Mirrors {
     }
 }
 
-class CachedClassMirror extends ClassMirror implements ClassVisitor {
+class CachedClassMirror extends ClassMirror {
 
+    MethodMirror[] declaredMethods;
     String name;
     boolean isInterface;
-    MethodMirror[] declaredMethods;
     String[] interfaceNames;
     String superName;
+    
+    private ClassVisitor classVisitor= new ClassVisitor(Opcodes.ASM4) {
+        @Override
+        public void visit(int version, int access, String name, String signature, String superName, String[] interfaces) {
+        	CachedClassMirror.this.name = name;
+        	CachedClassMirror.this.superName = superName;
+        	CachedClassMirror.this.interfaceNames = interfaces == null ? CachedClassMirrors.EMPTY_SET : interfaces;
+        	CachedClassMirror.this.isInterface = (access & Opcodes.ACC_INTERFACE) > 0;
+        }
+
+
+        @Override
+        public MethodVisitor visitMethod(int access, String name, String desc, String signature,
+                String[] exceptions) {
+            if (tmpMethodList == null) {
+                tmpMethodList = new ArrayList<CachedMethodMirror>();
+            }
+            tmpMethodList.add(new CachedMethodMirror(access, name, desc, exceptions));
+            return null; // null MethodVisitor to avoid examining the instructions.
+        }
+        
+        public void visitEnd() {
+            if (tmpMethodList != null) {
+                declaredMethods = new MethodMirror[tmpMethodList.size()];
+                int i = 0;
+                for (MethodMirror mm: tmpMethodList) {
+                    declaredMethods[i++] = mm;
+                }
+                tmpMethodList = null;
+            }
+        }
+
+        // Dummy methods
+        
+        public void visitSource(String source, String debug) {}
+        public void visitOuterClass(String owner, String name, String desc) {}
+        public AnnotationVisitor visitAnnotation(String desc, boolean visible) {
+            return DummyAnnotationVisitor.singleton;
+        }
+        public void visitAttribute(Attribute attr) {}
+        public void visitInnerClass(String name, String outerName, String innerName, int access) {}
+        public FieldVisitor visitField(int access, String name, String desc, String signature,
+                Object value) {
+            return null;
+        }
+	};
     
     private List<CachedMethodMirror> tmpMethodList; //used only while processing bytecode. 
     
     public CachedClassMirror(byte []bytecode) {
         ClassReader cr = new ClassReader(bytecode);
-        cr.accept(this, true);
+        cr.accept(classVisitor, ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
     }
 
     @Override
@@ -135,54 +181,11 @@ class CachedClassMirror extends ClassMirror implements ClassVisitor {
         return false;
     }
     
-    
-    // ClassVisitor implementation
-    @Override
-    public void visit(int version, int access, String name, String signature, String superName,
-            String[] interfaces) {
-        this.name = name;
-        this.superName = superName;
-        this.interfaceNames = interfaces == null ? CachedClassMirrors.EMPTY_SET : interfaces;
-        this.isInterface = (access & Opcodes.ACC_INTERFACE) > 0;
-    }
-
-
-    @Override
-    public MethodVisitor visitMethod(int access, String name, String desc, String signature,
-            String[] exceptions) {
-        if (tmpMethodList == null) {
-            tmpMethodList = new ArrayList<CachedMethodMirror>();
-        }
-        tmpMethodList.add(new CachedMethodMirror(access, name, desc, exceptions));
-        return null; // null MethodVisitor to avoid examining the instructions.
-    }
-    
-    public void visitEnd() {
-        if (tmpMethodList != null) {
-            declaredMethods = new MethodMirror[tmpMethodList.size()];
-            int i = 0;
-            for (MethodMirror mm: tmpMethodList) {
-                declaredMethods[i++] = mm;
-            }
-            tmpMethodList = null;
-        }
-    }
-
-    // Dummy methods
-    
-    public void visitSource(String source, String debug) {}
-    public void visitOuterClass(String owner, String name, String desc) {}
-    public AnnotationVisitor visitAnnotation(String desc, boolean visible) {
-        return DummyAnnotationVisitor.singleton;
-    }
-    public void visitAttribute(Attribute attr) {}
-    public void visitInnerClass(String name, String outerName, String innerName, int access) {}
-    public FieldVisitor visitField(int access, String name, String desc, String signature,
-            Object value) {
-        return null;
-    }
-    static class DummyAnnotationVisitor implements AnnotationVisitor {
-        static DummyAnnotationVisitor singleton = new DummyAnnotationVisitor();
+    static class DummyAnnotationVisitor extends AnnotationVisitor {
+		static DummyAnnotationVisitor singleton = new DummyAnnotationVisitor();
+        private DummyAnnotationVisitor() {
+			super(Opcodes.ASM4);
+		}
         public void visit(String name, Object value) {}
         public AnnotationVisitor visitAnnotation(String name, String desc) {return this;}
         public AnnotationVisitor visitArray(String name) {return DummyAnnotationVisitor.singleton;}

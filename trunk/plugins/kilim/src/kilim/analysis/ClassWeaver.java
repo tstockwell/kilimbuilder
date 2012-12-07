@@ -19,7 +19,6 @@ import static org.objectweb.asm.Opcodes.V1_1;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -63,7 +62,7 @@ public class ClassWeaver {
     public void weave() throws KilimException {
         classFlow.analyze(false);
         if (needsWeaving() && classFlow.isPausable()) {
-            ClassWriter cw = new ClassWriter(false);
+            ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
             accept(cw);
             addClassInfo(new ClassInfo(classFlow.getClassName(), cw.toByteArray()));
         }
@@ -130,7 +129,7 @@ public class ClassWeaver {
         cv.visitEnd();
     }
 
-    @SuppressWarnings(value = { "unchecked" })
+    @SuppressWarnings(value = { "unchecked", "rawtypes" })
     static String[] toStringArray(List list) {
         String[] array = new String[list.size()];
         list.toArray(array);
@@ -202,7 +201,7 @@ public class ClassWeaver {
         synchronized (stateClasses) {
             classInfo= stateClasses.get(className);
             if (classInfo == null) {
-                ClassWriter cw = new ClassWriter(false);
+                ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
                 cw.visit(V1_1, ACC_PUBLIC | ACC_FINAL, className, null, "kilim/State", null);
 
                 // Create default constructor

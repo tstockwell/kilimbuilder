@@ -32,6 +32,7 @@ import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.AnnotationNode;
+import org.objectweb.asm.tree.LabelNode;
 import org.objectweb.asm.tree.LineNumberNode;
 import org.objectweb.asm.tree.LocalVariableNode;
 import org.objectweb.asm.tree.MethodInsnNode;
@@ -397,6 +398,11 @@ public class MethodFlow extends MethodNode {
     
     int getLabelPosition(Label l) {
         return labelToPosMap.get(l);
+    }
+    
+    @Override
+    public LabelNode getLabelNode(Label arg0) {
+        return super.getLabelNode(arg0);
     }
     
     BasicBlock getOrCreateBasicBlock(Label l) { 
