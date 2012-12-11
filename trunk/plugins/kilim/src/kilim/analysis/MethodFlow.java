@@ -273,10 +273,10 @@ public class MethodFlow extends MethodNode {
         for (int i = 0; i < tcbs.size(); i++) {
             TryCatchBlockNode tcb = tcbs.get(i);
             handlers.add(new Handler(
-                    getLabelPosition(tcb.start),
-                    getLabelPosition(tcb.end) - 1, // end is inclusive
+                    getLabelPosition(tcb.start.getLabel()),
+                    getLabelPosition(tcb.end.getLabel()) - 1, // end is inclusive
                     tcb.type, 
-                    getOrCreateBasicBlock(tcb.handler)));
+                    getOrCreateBasicBlock(tcb.handler.getLabel())));
         }
         for (BasicBlock bb : basicBlocks) {
             bb.chooseCatchHandlers(handlers);
@@ -523,10 +523,10 @@ public class MethodFlow extends MethodNode {
                 ((LocalVariableNode) localVariables.get(i)).accept(mv);
             }
             // visits line numbers
-            n = lineNumbers == null ? 0 : lineNumbers.size();
-            for (i = 0; i < n; ++i) {
-                ((LineNumberNode) lineNumbers.get(i)).accept(mv);
-            }
+            //n = lineNumbers == null ? 0 : lineNumbers.size();
+            //for (i = 0; i < n; ++i) {
+            //    ((LineNumberNode) lineNumbers.get(i)).accept(mv);
+            //}
             // visits maxs
             mv.visitMaxs(maxStack, maxLocals);
         }

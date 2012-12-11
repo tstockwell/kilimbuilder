@@ -1,7 +1,7 @@
 Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
 Bundle-Name: kilim
-Bundle-SymbolicName: kilim
+Bundle-SymbolicName: com.googlecode.kilimbuilder.kilim
 Bundle-Version: 0.9.1
 Export-Package: kilim,
  kilim.analysis,
