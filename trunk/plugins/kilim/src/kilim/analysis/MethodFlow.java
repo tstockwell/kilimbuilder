@@ -24,6 +24,7 @@ import java.util.PriorityQueue;
 
 import kilim.KilimException;
 import kilim.mirrors.Detector;
+import kilim.tools.DumpUtils;
 
 import org.objectweb.asm.AnnotationVisitor;
 import org.objectweb.asm.Attribute;
@@ -184,6 +185,8 @@ public class MethodFlow extends MethodNode {
 //            super.visitLabel(label);
     }
     
+    
+    
     /*
     @Override
     public AnnotationVisitor visitAnnotation(String desc, boolean visible) {
@@ -294,6 +297,7 @@ public class MethodFlow extends MethodNode {
             i = bb.initialize(i); // i now points to the last instruction in bb. 
             basicBlocks.add(bb);
         }
+        DumpUtils.DumpBasicBlockStructure(this);
     }
     
     /**
@@ -401,8 +405,11 @@ public class MethodFlow extends MethodNode {
     }
     
     @Override
-    public LabelNode getLabelNode(Label arg0) {
-        return super.getLabelNode(arg0);
+    public LabelNode getLabelNode(Label label) {
+        if (!(label.info instanceof LabelNode)) {
+        	label.info = new LabelNode(label);
+        }
+        return (LabelNode) label.info;
     }
     
     BasicBlock getOrCreateBasicBlock(Label l) { 

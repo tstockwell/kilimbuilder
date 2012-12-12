@@ -326,7 +326,7 @@ public class BasicBlock implements Comparable<BasicBlock> {
                 case TABLESWITCH:
                 case LOOKUPSWITCH:
                     Label defaultLabel;
-                    List<Label> otherLabels;
+                    List<LabelNode> otherLabels;
                     if (opcode == TABLESWITCH) {
                         defaultLabel = ((TableSwitchInsnNode) ain).dflt.getLabel();
                         otherLabels = ((TableSwitchInsnNode) ain).labels;
@@ -334,8 +334,8 @@ public class BasicBlock implements Comparable<BasicBlock> {
                         defaultLabel = ((LookupSwitchInsnNode) ain).dflt.getLabel();
                         otherLabels = ((LookupSwitchInsnNode) ain).labels;
                     }
-                    for (Iterator<Label> it = otherLabels.iterator(); it.hasNext();) {
-                        l = (Label) it.next();
+                    for (Iterator<LabelNode> it = otherLabels.iterator(); it.hasNext();) {
+                        l = (Label) it.next().getLabel();
                         addSuccessor(flow.getOrCreateBasicBlock(l));
                     }
                     addSuccessor(flow.getOrCreateBasicBlock(defaultLabel));
