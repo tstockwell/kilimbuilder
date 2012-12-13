@@ -29,6 +29,7 @@ import org.objectweb.asm.Attribute;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.MethodVisitor;
+import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.AnnotationNode;
 import org.objectweb.asm.tree.FieldNode;
 import org.objectweb.asm.tree.InnerClassNode;
@@ -209,7 +210,7 @@ public class ClassWeaver {
                 // super(); // call java/lang/Object.<init>()
                 // }
                 MethodVisitor mw = cw.visitMethod(ACC_PUBLIC, "<init>", "()V", null, null);
-                mw.visitInsn(ALOAD_0);
+                mw.visitVarInsn(Opcodes.ALOAD, 0);
                 mw.visitMethodInsn(INVOKESPECIAL, STATE_CLASS, "<init>", "()V");
                 mw.visitInsn(RETURN);
                 // this code uses a maximum of one stack element and one local variable
