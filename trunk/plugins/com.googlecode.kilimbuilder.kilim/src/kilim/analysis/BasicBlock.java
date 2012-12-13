@@ -41,12 +41,14 @@ import kilim.mirrors.Detector;
 import org.objectweb.asm.Label;
 import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.FieldInsnNode;
+import org.objectweb.asm.tree.FrameNode;
 import org.objectweb.asm.tree.IincInsnNode;
 import org.objectweb.asm.tree.InsnList;
 import org.objectweb.asm.tree.IntInsnNode;
 import org.objectweb.asm.tree.JumpInsnNode;
 import org.objectweb.asm.tree.LabelNode;
 import org.objectweb.asm.tree.LdcInsnNode;
+import org.objectweb.asm.tree.LineNumberNode;
 import org.objectweb.asm.tree.LookupSwitchInsnNode;
 import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MultiANewArrayInsnNode;
@@ -239,7 +241,6 @@ public class BasicBlock implements Comparable<BasicBlock> {
      *   3. A pausable method is treated like a labeled instruction, and is 
      *      given a label if there isn't one already. Constraint 2 applies.
      */
-    @SuppressWarnings("unchecked")
     int initialize(int pos) {
         AbstractInsnNode ain;
         startPos = pos;
@@ -372,6 +373,8 @@ public class BasicBlock implements Comparable<BasicBlock> {
             if (endOfBB) break;
         }
         endPos = pos;
+        if (size <= endPos)
+        	endPos= size-1;
         if (hasFollower && (pos + 1) < flow.instructions.size()) {
             // add the following basic block as a successor
             Label l = flow.getOrCreateLabelAtPos(pos + 1);
@@ -494,6 +497,14 @@ public class BasicBlock implements Comparable<BasicBlock> {
         try {
             for (i = startPos; i <= endPos; i++) {
                 AbstractInsnNode ain = getInstruction(i);
+                
+                if (ain instanceof LabelNode)
+                	continue;
+                if (ain instanceof FrameNode)
+                	continue;
+                if (ain instanceof LineNumberNode)
+                	continue;
+                
                 int opcode = ain.getOpcode();
                 int val, var;
                 switch (opcode) {

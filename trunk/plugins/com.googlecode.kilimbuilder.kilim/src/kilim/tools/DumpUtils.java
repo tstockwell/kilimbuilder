@@ -6,8 +6,11 @@ import kilim.analysis.MethodFlow;
 
 public class DumpUtils {
 	public static void DumpBasicBlockStructure(MethodFlow methodFlow) {
-		System.out.println("MethodFlow("+methodFlow.hashCode()+") { ");
-		System.out.println("\t\thashcode:"+methodFlow.hashCode());
+		System.out.println("MethodFlow { ");
+		System.out.println("\tinstructions: {");
+		System.out.println("\t\tsize:"+methodFlow.instructions.size());
+		System.out.println("\t}");
+		System.out.println("\thashcode:"+methodFlow.hashCode());
 		System.out.println("\tbasicBlocks: {");
 		BBList bbList= methodFlow.getBasicBlocks();
 		for (BasicBlock basicBlock:bbList) {

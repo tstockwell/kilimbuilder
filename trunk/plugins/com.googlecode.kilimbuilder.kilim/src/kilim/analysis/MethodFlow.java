@@ -21,6 +21,7 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.PriorityQueue;
+import java.util.Set;
 
 import kilim.KilimException;
 import kilim.mirrors.Detector;
@@ -179,10 +180,8 @@ public class MethodFlow extends MethodNode {
     
     @Override
     public void visitLabel(Label label) {
-//        if (hasPausableAnnotation)
-            setLabel(instructions.size(), label);
-//        else
-//            super.visitLabel(label);
+        setLabel(instructions.size(), label);
+        super.visitLabel(label);
     }
     
     
@@ -402,6 +401,9 @@ public class MethodFlow extends MethodNode {
     
     int getLabelPosition(Label l) {
         return labelToPosMap.get(l);
+    }
+    Set<Label> getAllLabels() {
+        return labelToPosMap.keySet();
     }
     
     @Override
