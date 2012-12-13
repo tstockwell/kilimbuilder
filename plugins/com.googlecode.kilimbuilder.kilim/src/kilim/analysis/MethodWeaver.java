@@ -154,8 +154,16 @@ public class MethodWeaver {
 		visitTryCatchBlocks(mv);
 		visitInstructions(mv);
 		// visitLineNumbers(mv);
+		visitLabels(mv);
 		visitLocals(mv);
 		mv.visitMaxs(maxStack, maxVars);
+	}
+
+	private void visitLabels(MethodVisitor mv) {
+		// make sure all labels have Frames
+		for (Label label:methodFlow.getAllLabels()) {
+			mv.visitLabel(label);
+		}
 	}
 
 	// TODO Fix up locals and line numbers.
