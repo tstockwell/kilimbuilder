@@ -83,6 +83,7 @@ import java.util.Collections;
 
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
+import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.MethodInsnNode;
 
 /**
@@ -341,7 +342,7 @@ public class CallWeaver {
             Value v = f.getStack(numBottom);
             if (!methodWeaver.isStatic() && f.getLocal(0) == v) {
                 // "this" is already properly initialized.
-                mv.visitInsn(ALOAD_0);
+                mv.visitVarInsn(Opcodes.ALOAD, 0);
             } else {
                 loadVar(mv, TOBJECT, methodWeaver.getFiberVar());
                 mv.visitMethodInsn(INVOKEVIRTUAL, FIBER_CLASS, "getCallee", "()Ljava/lang/Object;");
@@ -522,7 +523,7 @@ public class CallWeaver {
         // state.self = this if the current executing method isn't static
         if (!bb.flow.isStatic()) {
             loadVar(mv, TOBJECT, stateVar);
-            mv.visitInsn(ALOAD_0); // for state.self == this
+            mv.visitVarInsn(Opcodes.ALOAD, 0); // for state.self == this
             mv.visitFieldInsn(PUTFIELD, STATE_CLASS, "self", D_OBJECT);
         }
         int pc = methodWeaver.getPC(this);
@@ -1017,21 +1018,11 @@ class VMType {
 
     static void loadVar(MethodVisitor mv, int vmt, int var) {
         assert var >= 0 : "Got var = " + var;
-        if (var < 4) {
-            // short instructions like ALOAD_n exist for n = 0 .. 4
-            mv.visitInsn(ldInsn[vmt] + var);
-        } else {
-            mv.visitVarInsn(loadInsn[vmt], var);
-        }
+        mv.visitVarInsn(loadInsn[vmt], var);
     }
 
     static void storeVar(MethodVisitor mv, int vmt, int var) {
         assert var >= 0;
-        if (var < 4) {
-            // short instructions like ALOAD_n exist for n = 0 .. 4
-            mv.visitInsn(stInsn[vmt] + var);
-        } else {
-            mv.visitVarInsn(storeInsn[vmt], var);
-        }
+        mv.visitVarInsn(storeInsn[vmt], var);
     }
 }
