@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.4"?>
+<plugin>
+   <extension
+         id="kilimBuilder"
+         name="Kilim Project Builder"
+         point="org.eclipse.core.resources.builders">
+      <builder
+            hasNature="true">
+         <run
+               class="com.googlecode.kilimbuilder.KilimBuilder">
+         </run>
+      </builder>
+   </extension>
+   <extension
+         id="kilimNature"
+         name="Kilim Project Nature"
+         point="org.eclipse.core.resources.natures">
+      <runtime>
+         <run
+               class="com.googlecode.kilimbuilder.KilimNature">
+         </run>
+      </runtime>
+      <builder
+            id="com.googlecode.kilimbuilder.kilimBuilder">
+      </builder>
+   </extension>
+   <extension
+         point="org.eclipse.ui.popupMenus">
+      <objectContribution
+            adaptable="true"
+            id="com.googlecode.kilimbuilder.contribution1"
+            nameFilter="*"
+            objectClass="org.eclipse.core.resources.IProject">
+         <action
+               class="com.googlecode.kilimbuilder.ToggleNatureAction"
+               enablesFor="+"
+               id="com.googlecode.kilimbuilder.addRemoveNatureAction"
+               label="Add/Remove Kilim Support"
+               menubarPath="org.eclipse.ui.projectConfigure/additions">
+         </action>
+      </objectContribution>
+   </extension>
+   <extension
+         id="kilimProblem"
+         name="Kilim Problem"
+         point="org.eclipse.core.resources.markers">
+      <super
+            type="org.eclipse.core.resources.problemmarker">
+      </super>
+      <persistent
+            value="true">
+      </persistent>
+   </extension>
+   
+   <extension
+       point="org.eclipse.jdt.core.classpathContainerInitializer">
+      <classpathContainerInitializer
+          id="com.googlecode.kilimbuilder.KILIM_CONTAINER"
+          class="com.googlecode.kilimbuilder.KilimClasspathContainerInitializer"/>
+   </extension>
+   
+	<extension point="org.eclipse.ui.startup">
+  		<startup class="com.googlecode.kilimbuilder.KilimStartup"/>
+   </extension>
+   
+
+</plugin>
